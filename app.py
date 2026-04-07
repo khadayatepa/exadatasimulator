@@ -1,774 +1,634 @@
+"""
+Oracle Exadata X8M DBA/DMA Lab Simulator
+=========================================
+Author : Prashant | Oracle ACE (Apprentice) | Database Architect
+Blog   : prashantoracledba.wordpress.com
+Stack  : Streamlit + OpenAI (GPT-4o)
+
+Self-contained: only imports streamlit and openai.
+All lab data lives inline in LAB_CATALOG.
+"""
+
 import streamlit as st
 from openai import OpenAI
 
-# ─────────────────────────────────────────────────────────────────────────────
+# =============================================================================
 # PAGE CONFIG
-# ─────────────────────────────────────────────────────────────────────────────
+# =============================================================================
 st.set_page_config(
-    page_title="Oracle Exadata X8M Simulator",
+    page_title="Exadata X8M Simulator",
     page_icon="🔴",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CSS
-# ─────────────────────────────────────────────────────────────────────────────
+# =============================================================================
+# GLOBAL CSS — Mission-control dark theme
+# =============================================================================
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap');
-html,body,[class*="css"]{font-family:'Inter',sans-serif;}
-#MainMenu,footer,header{visibility:hidden;}
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap');
 
-.top-banner{background:#060e1c;border-bottom:3px solid #e74c3c;padding:10px 20px 8px;
-  margin:-1rem -1rem 0 -1rem;display:flex;align-items:center;gap:14px;}
-.t-logo{font-size:9px;color:#e74c3c;letter-spacing:3px;text-transform:uppercase;
-  font-weight:700;font-family:'JetBrains Mono',monospace;}
-.t-title{font-size:15px;color:#d0e8f8;font-weight:600;}
-.t-pills{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.pill{background:#0d1e35;border:1px solid #1e3a5f;border-radius:20px;padding:3px 12px;
-  font-size:11px;color:#8aadcc;font-family:'JetBrains Mono',monospace;}
-.pill b{color:#f39c12;}
-.st-ok{font-size:11px;padding:3px 10px;border-radius:4px;
-  background:#0a2a18;color:#5dc888;border:1px solid #1a5a30;}
-.st-err{font-size:11px;padding:3px 10px;border-radius:4px;
-  background:#2a0a0a;color:#e87a5a;border:1px solid #5a1a1a;}
-
-.rack-box{background:#0d1e35;border-radius:6px;padding:8px 14px;
-  border:1px solid #1e3a5f;margin-bottom:8px;}
-.rack-lbl{font-size:9px;color:#4a7ab5;letter-spacing:1.5px;text-transform:uppercase;
-  margin-bottom:5px;font-family:'JetBrains Mono',monospace;}
-.rack-units{display:flex;flex-wrap:wrap;gap:3px;}
-.ru{padding:2px 7px;border-radius:3px;font-size:9px;border:1px solid;
-  font-family:'JetBrains Mono',monospace;display:inline-block;}
-.ru-compute{background:#0e2a5a;color:#5da8e8;border-color:#1a4a9a;}
-.ru-cell{background:#0a2a18;color:#5dc888;border-color:#1a5a30;}
-.ru-sw{background:#1a0a3a;color:#a870c8;border-color:#4a1a7a;}
-.ru-infra{background:#2a1a0a;color:#c8a828;border-color:#6a4a18;}
-
-.chat-user{background:#150808;border:1px solid #3a1010;border-radius:10px 10px 3px 10px;
-  padding:9px 13px;margin:5px 0 5px 60px;color:#f0d0d0;font-size:13px;line-height:1.6;}
-.chat-bot{background:#0d1e35;border:1px solid #1e3a5f;border-radius:10px 10px 10px 3px;
-  padding:9px 13px;margin:5px 0;color:#c8dff0;font-size:13px;line-height:1.65;
-  font-family:'JetBrains Mono',monospace;white-space:pre-wrap;}
-.chat-sys{background:#111108;border:1px solid #3a3a10;border-radius:6px;
-  padding:7px 12px;margin:5px 0;color:#e0d898;font-size:11px;
-  font-family:'JetBrains Mono',monospace;}
-
-.term-hdr{background:#020810;border:1px solid #1a4a2a;border-radius:5px 5px 0 0;
-  padding:5px 12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#5dc888;}
-.obj-box{background:#060e1c;border:1px solid #2a5080;border-left:3px solid #2980b9;
-  border-radius:5px;padding:8px 12px;margin:5px 0;font-size:12px;color:#8aadcc;line-height:1.6;}
-.val-box{background:#060e1c;border:1px solid #1a5a30;border-left:3px solid #27ae60;
-  border-radius:5px;padding:8px 12px;margin:5px 0;font-size:12px;color:#5dc888;}
-.prog-wrap{background:#1e3a5f;border-radius:3px;height:5px;margin:4px 0 8px;}
-.prog-bar{background:#f39c12;border-radius:3px;height:100%;transition:width .3s;}
-
-[data-testid="stSidebar"]{background:#070f1e !important;border-right:1px solid #1e3a5f;
-  min-width:225px !important;max-width:225px !important;}
-[data-testid="stSidebar"] p,
-[data-testid="stSidebar"] label,
-[data-testid="stSidebar"] span{color:#8aadcc !important;font-size:11px !important;}
-[data-testid="stSidebar"] .stButton>button{background:transparent !important;
-  border:1px solid #1e3a5f !important;color:#8aadcc !important;
-  text-align:left !important;width:100% !important;border-radius:4px !important;
-  font-size:11px !important;padding:5px 8px !important;margin-bottom:2px !important;}
-[data-testid="stSidebar"] .stButton>button:hover{background:#122240 !important;
-  border-color:#2a5080 !important;color:#c8dff0 !important;}
-[data-testid="stSidebar"] .stButton>button[kind="primary"]{background:#1a0a0a !important;
-  border-color:#e74c3c !important;color:#e74c3c !important;}
-
-.stTextInput label,.stSelectbox label{color:#8aadcc !important;font-size:11px !important;}
-.stTextInput input,.stSelectbox>div>div{background:#0d1e35 !important;
-  border-color:#1e3a5f !important;color:#c8dff0 !important;font-size:12px !important;}
-.main .block-container{background:#0a1628;padding-top:0;max-width:100% !important;}
-.stApp{background:#0a1628;}
-hr{border-color:#1e3a5f !important;margin:6px 0 !important;}
+.stApp {
+    background: radial-gradient(ellipse at top, #081424 0%, #04080f 100%);
+    color: #c8dff8;
+    font-family: 'Rajdhani', sans-serif;
+}
+h1, h2, h3 { font-family: 'Orbitron', sans-serif !important; letter-spacing: 1.5px; }
+.brand-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px; font-weight: 700; letter-spacing: 3px;
+    background: linear-gradient(90deg, #e74c3c, #f39c12);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.brand-sub { color: #6a8faa; font-size: 13px; letter-spacing: 2px; }
+.panel {
+    background: #0a1220; border: 1px solid #1a2c47; border-radius: 10px;
+    padding: 16px; margin-bottom: 14px;
+}
+.panel-title {
+    font-family: 'Orbitron', sans-serif; color: #f39c12;
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    border-bottom: 1px solid #1a2c47; padding-bottom: 6px; margin-bottom: 10px;
+}
+.terminal {
+    background: #030a14; border: 1px solid #1a4a2a; border-radius: 6px;
+    padding: 14px; font-family: 'Share Tech Mono', monospace;
+    color: #00ff88; font-size: 13px; line-height: 1.55;
+    max-height: 420px; overflow-y: auto;
+    box-shadow: inset 0 0 40px rgba(0,255,136,0.05);
+}
+.terminal .prompt { color: #f39c12; font-weight: 700; }
+.terminal .cmd { color: #c8dff8; }
+.terminal .ai { color: #66c2ff; }
+.metric-pill {
+    display: inline-block; background: #0f1a2e; border: 1px solid #1a2c47;
+    padding: 4px 10px; border-radius: 12px; font-family: 'Share Tech Mono', monospace;
+    font-size: 11px; color: #c8dff8; margin-right: 6px;
+}
+.metric-pill .v { color: #00ff88; font-weight: 700; }
+.lab-card {
+    background: #0f1a2e; border-left: 3px solid #f39c12;
+    padding: 10px 14px; border-radius: 4px; margin: 6px 0; font-size: 13px;
+}
+.lab-card .id { color: #f39c12; font-family: 'Share Tech Mono', monospace; font-weight: 700; }
+.lab-card .ttl { color: #c8dff8; font-weight: 600; }
+.tag-demo { background:#0088ff22; color:#66c2ff; padding:1px 8px; border-radius:8px; font-size:10px; }
+.tag-lab  { background:#00ff8822; color:#00ff88; padding:1px 8px; border-radius:8px; font-size:10px; }
+.tag-quiz { background:#f39c1222; color:#f39c12; padding:1px 8px; border-radius:8px; font-size:10px; }
+div[data-testid="stSelectbox"] label, div[data-testid="stTextInput"] label {
+    color: #6a8faa !important; font-size: 11px !important;
+    text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;
+}
+.stButton > button {
+    background: linear-gradient(90deg, #c0392b, #e74c3c);
+    color: white; border: none; font-family: 'Rajdhani', sans-serif;
+    font-weight: 700; letter-spacing: 1px; border-radius: 6px;
+}
+.stButton > button:hover { background: linear-gradient(90deg, #e74c3c, #f39c12); }
 </style>
 """, unsafe_allow_html=True)
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# LAB CATALOG — 105 labs, 4 levels, fully inline (no external imports)
-# ─────────────────────────────────────────────────────────────────────────────
-LAB_CATALOG = {
-  "L1": {"label":"L1 – Basic Operations","color":"#5da8e8","icon":"🔵","groups":{
-    "Database & PDB":[
-      {"id":1,"title":"Create CDB with 2 PDBs","obj":"Create CDB + 2 PDBs and verify services","scenario":"New application onboarding needs isolated DEV and PROD PDBs","tasks":["Create CDB using DBCA or SQL","Create PDB1 and PDB2 with admin users","Open PDBs and verify via lsnrctl"],"validation":"Both PDBs accessible via service name","tag":"demo"},
-      {"id":2,"title":"Open and Close PDBs","obj":"Manage PDB lifecycle states","scenario":"Scheduled maintenance requires controlled PDB shutdown","tasks":["Check PDB status with V$PDBS","Close PDB gracefully","Open PDB READ WRITE and READ ONLY"],"validation":"PDB transitions confirmed in V$PDBS","tag":"lab"},
-      {"id":3,"title":"Clone PDB Locally","obj":"Clone an existing PDB within same CDB","scenario":"QA team needs copy of DEV PDB for testing","tasks":["Put source PDB in READ ONLY","CREATE PLUGGABLE DATABASE ... FROM","Open cloned PDB and verify data"],"validation":"Cloned PDB accessible with source data","tag":"lab"},
-      {"id":4,"title":"Drop PDB Safely","obj":"Remove PDB including datafiles","scenario":"Decommission expired test PDB","tasks":["Close the PDB","DROP PLUGGABLE DATABASE ... INCLUDING DATAFILES","Verify removal from V$PDBS"],"validation":"PDB and all datafiles removed","tag":"lab"},
-      {"id":5,"title":"Rename PDB","obj":"Rename a PDB without data loss","scenario":"PDB naming convention change required","tasks":["Close PDB","ALTER PLUGGABLE DATABASE RENAME GLOBAL_NAME","Open and verify new service name"],"validation":"PDB accessible with new name","tag":"lab"},
-      {"id":6,"title":"Configure Default Tablespace","obj":"Set default and temp tablespaces for a PDB","scenario":"Ensure new users get correct storage allocation","tasks":["Create USERS and TEMP tablespaces","ALTER DATABASE DEFAULT TABLESPACE","Verify with DBA_TABLESPACES"],"validation":"New user inherits correct tablespaces","tag":"lab"},
-    ],
-    "User & Security":[
-      {"id":7,"title":"Create User with Roles","obj":"Create DB user and assign appropriate roles","scenario":"New developer needs DB access","tasks":["CREATE USER with profile","GRANT CONNECT, RESOURCE","GRANT QUOTA on DATA tablespace"],"validation":"User can connect and create objects","tag":"lab"},
-      {"id":8,"title":"Grant and Revoke Privileges","obj":"Manage object and system privileges","scenario":"Application user needs SELECT on specific tables only","tasks":["GRANT SELECT on schema tables","Grant CREATE SESSION","Revoke privilege and verify denial"],"validation":"Privilege changes effective immediately","tag":"lab"},
-      {"id":9,"title":"Enable Unified Auditing","obj":"Enable and configure unified audit policy","scenario":"Compliance requires DML audit on sensitive tables","tasks":["CREATE AUDIT POLICY for DML","AUDIT POLICY enable","Verify in UNIFIED_AUDIT_TRAIL"],"validation":"Audit records created for DML operations","tag":"lab"},
-      {"id":10,"title":"Create Password Profile","obj":"Enforce password complexity and expiry","scenario":"Security hardening: 90-day password expiry with lockout","tasks":["CREATE PROFILE with PASSWORD_LIFE_TIME=90","Set FAILED_LOGIN_ATTEMPTS=5","Assign profile to users"],"validation":"Password enforcement confirmed","tag":"lab"},
-      {"id":11,"title":"Lock and Unlock Users","obj":"Control user account status","scenario":"Offboarding employee - lock DB account immediately","tasks":["ALTER USER ... ACCOUNT LOCK","Verify connection denied","ALTER USER ... ACCOUNT UNLOCK"],"validation":"Lock/unlock transitions verified","tag":"lab"},
-    ],
-    "Storage Basics":[
-      {"id":12,"title":"Create Tablespace in +DATA","obj":"Create ASM-backed tablespace","scenario":"New application needs dedicated tablespace on Exadata","tasks":["CREATE TABLESPACE using +DATA diskgroup","Set EXTENT MANAGEMENT LOCAL","Verify in DBA_TABLESPACES and DBA_DATA_FILES"],"validation":"Tablespace visible and usable","tag":"lab"},
-      {"id":13,"title":"Add Datafile to Tablespace","obj":"Extend tablespace by adding datafile","scenario":"Tablespace usage at 85% - add capacity","tasks":["Check usage with DBA_FREE_SPACE","ALTER TABLESPACE ADD DATAFILE on +DATA","Verify new file in DBA_DATA_FILES"],"validation":"Tablespace free space increased","tag":"lab"},
-      {"id":14,"title":"Resize Tablespace Datafile","obj":"Manually resize existing datafile","scenario":"Over-provisioned datafile needs rightsizing","tasks":["Check HWM with dbms_space","ALTER DATABASE DATAFILE RESIZE","Verify new size"],"validation":"Datafile resized without errors","tag":"lab"},
-      {"id":15,"title":"Enable Autoextend","obj":"Enable automatic extension on datafiles","scenario":"Prevent ORA-01654 by enabling autoextend","tasks":["ALTER DATABASE DATAFILE ... AUTOEXTEND ON NEXT 512M MAXSIZE 32G","Verify AUTOEXTENSIBLE=YES in DBA_DATA_FILES"],"validation":"Tablespace auto-extends on load","tag":"lab"},
-      {"id":16,"title":"Check Tablespace Usage","obj":"Query tablespace utilization and identify risk","scenario":"Proactive capacity check before month-end batch","tasks":["Query DBA_TABLESPACE_USAGE_METRICS","Identify tablespaces over 80%","Generate space report"],"validation":"Usage report with threshold alerts","tag":"lab"},
-    ],
-    "Backup Basics":[
-      {"id":17,"title":"Full RMAN Backup","obj":"Perform full database backup using RMAN","scenario":"Baseline backup before major change","tasks":["Configure RMAN channel on +RECO","BACKUP DATABASE PLUS ARCHIVELOG","Verify with LIST BACKUP SUMMARY"],"validation":"Backup completes with status AVAILABLE","tag":"lab"},
-      {"id":18,"title":"Incremental RMAN Backup","obj":"Configure level 0 + level 1 incremental backups","scenario":"Reduce daily backup window using incremental strategy","tasks":["BACKUP INCREMENTAL LEVEL 0 DATABASE","Run LEVEL 1 next day","LIST BACKUP to verify chain"],"validation":"Incremental chain complete and recoverable","tag":"lab"},
-      {"id":19,"title":"Validate RMAN Backup","obj":"Validate backup integrity without restoring","scenario":"DR test - confirm backup is valid","tasks":["RESTORE DATABASE VALIDATE","VALIDATE BACKUPSET all","Check V$BACKUP_VALIDATION"],"validation":"Zero corrupt blocks found","tag":"lab"},
-      {"id":20,"title":"List and Cross-Check Backups","obj":"Manage RMAN backup catalog","scenario":"Identify expired and obsolete backups","tasks":["LIST BACKUP SUMMARY","CROSSCHECK BACKUP","DELETE EXPIRED BACKUP"],"validation":"Catalog synchronized with physical files","tag":"lab"},
-    ],
-    "Monitoring":[
-      {"id":21,"title":"Generate AWR Report","obj":"Generate and interpret AWR HTML report","scenario":"Performance complaint during peak hours","tasks":["Identify snapshot IDs in DBA_HIST_SNAPSHOT","Run awrrpt.sql","Identify Top 5 Wait Events"],"validation":"AWR report generated, bottleneck identified","tag":"lab"},
-      {"id":22,"title":"Generate ASH Report","obj":"Use ASH for real-time and historical analysis","scenario":"5-minute spike in waits needs investigation","tasks":["Run awrashrpt.sql for spike window","Identify blocking sessions","Find hot object from ASH data"],"validation":"Root cause identified from ASH","tag":"lab"},
-      {"id":23,"title":"Check Alert Log","obj":"Monitor alert log for ORA- errors","scenario":"Application reports intermittent errors","tasks":["Locate alert log via V$DIAG_INFO","Use adrci to query recent errors","Filter ORA-600 and ORA-7445"],"validation":"All recent errors documented and triaged","tag":"lab"},
-      {"id":24,"title":"Setup Tablespace Alert","obj":"Configure automated tablespace threshold alerts","scenario":"Automate alerts before tablespace hits 90%","tasks":["Create monitoring view for usage","Set warning 80% critical 90%","Test alert by filling tablespace"],"validation":"Alert triggers correctly at threshold","tag":"lab"},
-      {"id":25,"title":"Monitor Active Sessions","obj":"Monitor current sessions and identify blocking","scenario":"Application hung - identify blocking chain","tasks":["Query V$SESSION for blocking sessions","Find lock chain with DBA_BLOCKERS","Kill blocking session if approved"],"validation":"Blocking chain identified and resolved","tag":"lab"},
-    ],
-  }},
-  "L2": {"label":"L2 – Intermediate Operations","color":"#5dc888","icon":"🟢","groups":{
-    "ASM & Storage":[
-      {"id":26,"title":"Create Diskgroup NORMAL Redundancy","obj":"Create new ASM diskgroup using Exadata grid disks","scenario":"New application needs dedicated storage isolation","tasks":["LIST GRIDDISK available on all cells via DCLI","CREATE DISKGROUP with NORMAL REDUNDANCY","Verify in V$ASM_DISKGROUP"],"validation":"Diskgroup online, 3 failure groups confirmed","tag":"lab"},
-      {"id":27,"title":"Add Disk to Diskgroup","obj":"Expand diskgroup by adding new grid disks","scenario":"DATA diskgroup at 70% - add capacity from new cell disks","tasks":["Create grid disks via CellCLI","ALTER DISKGROUP DATA ADD DISK","Monitor V$ASM_OPERATION for rebalance"],"validation":"Rebalance completes, free space increased","tag":"lab"},
-      {"id":28,"title":"Drop Disk Safely from Diskgroup","obj":"Remove disk from ASM without data loss","scenario":"Replace aging disk from diskgroup","tasks":["ALTER DISKGROUP DROP DISK with WAIT","Monitor rebalance progress","Verify disk removed from V$ASM_DISK"],"validation":"Disk removed, data migrated, no errors","tag":"lab"},
-      {"id":29,"title":"Monitor and Control Rebalance","obj":"Monitor ASM rebalance and adjust power","scenario":"Rebalance too slow before maintenance window closes","tasks":["Query V$ASM_OPERATION for status","ALTER DISKGROUP REBALANCE POWER 11","Verify ETA and completion"],"validation":"Rebalance completes within window","tag":"lab"},
-      {"id":30,"title":"Fix Diskgroup Imbalance","obj":"Detect and fix uneven disk distribution","scenario":"Some cells have much more free space than others","tasks":["Query V$ASM_DISK for per-disk usage","ALTER DISKGROUP REBALANCE to redistribute","Verify even distribution afterward"],"validation":"Disk usage within 5% across all cells","tag":"lab"},
-    ],
-    "RAC Administration":[
-      {"id":31,"title":"Add a RAC Node","obj":"Extend cluster by adding new compute node","scenario":"Capacity expansion: add node 3 to 2-node RAC","tasks":["Run addNode.sh on new node","cluvfy check prerequisites","srvctl add instance and start"],"validation":"New node ONLINE in crsctl","tag":"demo"},
-      {"id":32,"title":"Remove a RAC Node","obj":"Cleanly decommission a cluster node","scenario":"Node 3 decommissioned after capacity downsize","tasks":["Relocate services away from node","srvctl stop instance","Run deleteNode.sh and verify"],"validation":"Node removed, remaining nodes healthy","tag":"demo"},
-      {"id":33,"title":"Check Full Cluster Status","obj":"Assess complete cluster health using CRS tools","scenario":"Post-maintenance health check before business hours","tasks":["crsctl check cluster -all","olsnodes -s","srvctl status database -d ORCL"],"validation":"All resources ONLINE, no warnings","tag":"lab"},
-      {"id":34,"title":"Restart CRS Stack","obj":"Perform controlled CRS restart on one node","scenario":"CRS resources stuck - rolling restart required","tasks":["crsctl stop crs","crsctl start crs","crsctl check crs and verify resources"],"validation":"CRS restarts cleanly, all resources online","tag":"lab"},
-      {"id":35,"title":"Diagnose Node Eviction","obj":"Root cause a node eviction from cluster diagnostics","scenario":"Node 2 was evicted at 3am - find root cause","tasks":["Examine ocssd.log and css trace files","Check network and IB link stats at eviction time","Review misscount and disktimeout settings"],"validation":"Root cause identified: network or disk timeout","tag":"lab"},
-    ],
-    "Backup & Recovery":[
-      {"id":36,"title":"Restore Full Database","obj":"Full database restore and recovery from RMAN","scenario":"DB unrecoverable due to storage corruption","tasks":["Startup MOUNT","RESTORE DATABASE from RMAN backup","RECOVER DATABASE and OPEN RESETLOGS"],"validation":"Database open READ WRITE, data consistent","tag":"demo"},
-      {"id":37,"title":"Point-in-Time Recovery","obj":"Recover database to specific SCN or timestamp","scenario":"Accidental DELETE of critical table at 14:30","tasks":["STARTUP MOUNT","SET UNTIL TIME or SCN","RESTORE then RECOVER then OPEN RESETLOGS"],"validation":"Data restored to correct point","tag":"lab"},
-      {"id":38,"title":"Recover Dropped Table (TSPITR)","obj":"Use Tablespace Point-in-Time Recovery","scenario":"Entire USERS tablespace dropped with wrong data","tasks":["RECOVER TABLESPACE users UNTIL TIME","Plug recovered tablespace back","Export/import specific table if needed"],"validation":"Original table data recovered","tag":"lab"},
-      {"id":39,"title":"Restore Controlfile from Backup","obj":"Recover from lost or corrupted controlfile","scenario":"All controlfile copies lost","tasks":["STARTUP NOMOUNT","RESTORE CONTROLFILE FROM AUTOBACKUP","MOUNT and RECOVER DATABASE"],"validation":"Database mounts and opens after recovery","tag":"lab"},
-      {"id":40,"title":"Recover from Missing Archive Logs","obj":"Handle incomplete recovery scenario","scenario":"Some archivelogs missing from backup","tasks":["LIST ARCHIVELOG check for gaps","RECOVER DATABASE UNTIL CANCEL","Evaluate data loss and document"],"validation":"Database recovers as far as possible, gap documented","tag":"lab"},
-    ],
-    "Data Guard":[
-      {"id":41,"title":"Setup Physical Standby","obj":"Configure Data Guard physical standby from scratch","scenario":"New DR requirement: set up standby in secondary site","tasks":["Enable ARCHIVELOG and FORCE LOGGING on primary","Duplicate for standby with RMAN active duplicate","Configure LOG_ARCHIVE_DEST_2 and verify MRP"],"validation":"Standby applying redo, lag under 30 seconds","tag":"demo"},
-      {"id":42,"title":"Check Standby Lag","obj":"Monitor and measure Data Guard apply lag","scenario":"DR health check: verify RPO within 5 minutes","tasks":["Query V$DATAGUARD_STATS","Check V$MANAGED_STANDBY for MRP status","Use DGMGRL SHOW DATABASE VERBOSE"],"validation":"Lag confirmed within acceptable RPO","tag":"lab"},
-      {"id":43,"title":"Planned Switchover","obj":"Perform zero-downtime planned role reversal","scenario":"Planned maintenance: swap primary and standby roles","tasks":["Validate with DGMGRL VALIDATE DATABASE","DGMGRL SWITCHOVER TO standby","Verify new primary is OPEN READ WRITE"],"validation":"Switchover complete, both sides healthy","tag":"lab"},
-      {"id":44,"title":"Emergency Failover","obj":"Perform failover when primary is unreachable","scenario":"Primary site down - activate standby","tasks":["Confirm primary is truly down","DGMGRL FAILOVER TO standby","Redirect application connections"],"validation":"Standby becomes primary, application reconnected","tag":"lab"},
-      {"id":45,"title":"Rebuild Failed Standby","obj":"Re-create standby that has diverged","scenario":"Standby gap too large - rebuild from scratch","tasks":["Cancel MRP on standby","Re-duplicate from primary using RMAN","Re-enable and verify sync"],"validation":"New standby in sync, gap zero","tag":"lab"},
-    ],
-    "Performance Basics":[
-      {"id":46,"title":"Identify Top SQL","obj":"Find top resource-consuming SQL statements","scenario":"High CPU alert - identify culprit queries","tasks":["Query V$SQL ordered by ELAPSED_TIME","Use AWR Top SQL section","Check ASH for concurrent SQL waits"],"validation":"Top 5 SQL with execution plans identified","tag":"lab"},
-      {"id":47,"title":"Create SQL Profile","obj":"Apply SQL profile to fix bad execution plan","scenario":"Query changed plan after stats update","tasks":["Run SQL Tuning Advisor via DBMS_SQLTUNE","Review recommendation","Accept and apply SQL profile"],"validation":"SQL uses new plan, performance improved","tag":"lab"},
-      {"id":48,"title":"Add Index to Improve Query","obj":"Create index to eliminate full table scan","scenario":"Report query doing FTS on 500M row table","tasks":["EXPLAIN PLAN to confirm FTS","CREATE INDEX on filter columns","Verify index used in new plan"],"validation":"Query elapsed time reduced by 90 percent","tag":"lab"},
-      {"id":49,"title":"Fix Unintentional Full Table Scan","obj":"Force index use or rewrite query to avoid FTS","scenario":"Query ignoring index due to implicit conversion","tasks":["Identify FTS in AWR or V$SQL","Find implicit conversion in predicate","Fix query or add function-based index"],"validation":"FTS eliminated, execution plan optimal","tag":"lab"},
-      {"id":50,"title":"Tune Slow Query End-to-End","obj":"Full query tuning cycle: diagnose, plan, fix, verify","scenario":"SLA breach: monthly report 4 hours, needs under 30 min","tasks":["Capture baseline plan with DBMS_XPLAN","Identify bottleneck: join order, FTS, sort","Apply fix: stats, hints, index, or rewrite"],"validation":"Query meets SLA target under 30 minutes","tag":"lab"},
-    ],
-    "Exadata Basics":[
-      {"id":51,"title":"Check Smart Scan Usage","obj":"Verify Smart Scan is active and measure offload","scenario":"Confirm Exadata offload working for batch queries","tasks":["Query V$SYSSTAT for cell interconnect bytes","Run FTS query and check V$SQL for cell offload","Verify TABLE ACCESS STORAGE FULL in plan"],"validation":"Smart Scan confirmed, offload above 80 percent","tag":"lab"},
-      {"id":52,"title":"Enable and Size Flash Cache","obj":"Configure Exadata Smart Flash Cache","scenario":"High read latency - leverage NVMe flash cache","tasks":["CellCLI LIST FLASHCACHE DETAIL","DROP FLASHCACHE then CREATE FLASHCACHE ALL","Monitor hit ratio via V$SYSSTAT"],"validation":"Flash cache hit ratio above 80 percent","tag":"lab"},
-      {"id":53,"title":"Verify Storage Offload Efficiency","obj":"Measure storage cell offload percentage","scenario":"Validate Exadata ROI for new workload","tasks":["Run representative batch query","Compare V$SYSSTAT interconnect vs IO bytes","Calculate offload percent"],"validation":"Offload efficiency above 70 percent documented","tag":"lab"},
-      {"id":54,"title":"Check Cell Metrics","obj":"Monitor storage cell performance metrics","scenario":"Proactive health check - review all cell metrics","tasks":["DCLI cellcli LIST METRICCURRENT WHERE objectType=CELLDISK","Check CD_IO_RQ_R_LG and CD_IO_RQ_W metrics","LIST ALERTHISTORY on all cells"],"validation":"No critical metrics, all cells healthy","tag":"lab"},
-      {"id":55,"title":"CellCLI Basic Administration","obj":"Master fundamental CellCLI commands","scenario":"First-time cell administration","tasks":["LIST CELL DETAIL for hardware info","LIST CELLDISK and LIST GRIDDISK","LIST PHYSICALDISK WHERE status != normal"],"validation":"All cell components listed and healthy","tag":"lab"},
-    ],
-  }},
-  "L3": {"label":"L3 – Advanced Operations","color":"#f39c12","icon":"🟡","groups":{
-    "Exadata Deep Dive":[
-      {"id":56,"title":"Configure IORM Plans","obj":"Set up I/O Resource Manager to prioritize workloads","scenario":"OLTP and batch competing for I/O - enforce priority","tasks":["CellCLI LIST IORMPLAN DETAIL","ALTER IORMPLAN active=true with OLTP share=8 BATCH share=2","Monitor V$CELL_IOREASON for throttling"],"validation":"OLTP latency maintained during batch run","tag":"lab"},
-      {"id":57,"title":"Optimize Flash Cache Strategy","obj":"Tune flash cache for specific workload patterns","scenario":"Mixed OLTP and DW - optimize flash cache usage","tasks":["Analyze flash cache hit ratio by object","Set CELL_FLASH_CACHE for critical objects","Monitor improvement in V$SYSSTAT"],"validation":"Critical object hit ratio above 95 percent","tag":"lab"},
-      {"id":58,"title":"Analyze Storage Index Usage","obj":"Understand and leverage Exadata Storage Indexes","scenario":"Improve range scan queries using storage indexes","tasks":["Enable cell_offload_processing","Run range scan queries and check storage index eliminates IO","Verify via V$SYSSTAT cell index scans"],"validation":"Storage index eliminating over 50 percent of IO","tag":"lab"},
-      {"id":59,"title":"Diagnose Smart Scan Not Firing","obj":"Troubleshoot why Smart Scan is disabled for a query","scenario":"Large Exadata table query not using Smart Scan","tasks":["Check cell_offload_processing parameter","Verify no rowid access or small table threshold","Check for object encryption or compression issues"],"validation":"Root cause found, Smart Scan enabled","tag":"lab"},
-      {"id":60,"title":"Tune Cell Disk IO","obj":"Identify and resolve storage-level IO bottlenecks","scenario":"High disk IO latency reported on specific cells","tasks":["DCLI cellcli LIST METRICCURRENT WHERE name=CD_IO_RQMN_RD_LARGE","Identify hot disks and diskgroups","Rebalance or quarantine problematic disk"],"validation":"IO latency returned to baseline under 2ms","tag":"lab"},
-    ],
-    "Performance Tuning":[
-      {"id":61,"title":"Full AWR Bottleneck Analysis","obj":"Use AWR to identify and resolve system-wide bottleneck","scenario":"Peak hours: DB response slow - comprehensive AWR analysis","tasks":["Compare busy vs normal AWR snapshots","Identify top wait events and SQL","Correlate OS metrics: CPU, memory, IO"],"validation":"Bottleneck identified and remediation documented","tag":"lab"},
-      {"id":62,"title":"Fix Latch Contention","obj":"Diagnose and resolve latch wait events","scenario":"High latch cache buffers chains wait in AWR","tasks":["Query V$LATCH and V$LATCH_CHILDREN for hot latches","Identify hot blocks via X$BH","Apply fix: segment shrink or storage change"],"validation":"Latch waits reduced by over 80 percent","tag":"lab"},
-      {"id":63,"title":"Resolve High CPU SQL","obj":"Find and tune SQL consuming excessive CPU","scenario":"CPU at 95 percent - single SQL running thousands of times","tasks":["V$SQL ordered by CPU_TIME","Check parse counts and bind variables","Fix: cursor sharing, bind variables, SQL rewrite"],"validation":"CPU drops to normal baseline","tag":"lab"},
-      {"id":64,"title":"Tune Parallel Queries on Exadata","obj":"Optimize parallel execution with Exadata offload","scenario":"Parallel DW query not scaling - analyze efficiency","tasks":["Check DOP and skew in V$PQ_SLAVE","Verify Smart Scan with parallel via V$SYSSTAT","Tune PARALLEL_DEGREE_POLICY and statement queuing"],"validation":"Linear scaling with DOP, no skew","tag":"lab"},
-      {"id":65,"title":"Fix Temp Space Exhaustion","obj":"Resolve ORA-01652 and prevent recurrence","scenario":"Large sort/hash join exhausting TEMP tablespace","tasks":["Check V$SORT_USAGE for current consumers","Add tempfile to TEMP tablespace","Tune PGA_AGGREGATE_TARGET to reduce sort spills"],"validation":"TEMP usage normalized, ORA-01652 eliminated","tag":"lab"},
-    ],
-    "High Availability":[
-      {"id":66,"title":"Handle Node Eviction Scenario","obj":"Respond to and recover from involuntary node eviction","scenario":"Node 1 evicted from cluster during peak hours","tasks":["Verify eviction in ocssd.log","Restart CRS and re-join cluster","Root cause: check network, voting disk, IO timeout"],"validation":"Node rejoins, services auto-start, RCA documented","tag":"lab"},
-      {"id":67,"title":"Recover ASM Disk Failure","obj":"Handle failed/offline ASM disk and restore redundancy","scenario":"One HDD shows ERROR in V$ASM_DISK","tasks":["Identify failed disk: V$ASM_DISK WHERE state=ERROR","Determine if recoverable or needs replacement","Replace disk, create celldisk and griddisk, add to DG"],"validation":"ASM DG back to NORMAL redundancy","tag":"lab"},
-      {"id":68,"title":"Optimize Rebalance Performance","obj":"Control rebalance speed to minimize impact","scenario":"Rebalance after disk add impacting OLTP performance","tasks":["Monitor with V$ASM_OPERATION","Set REBALANCE POWER based on IO headroom","Use MODIFY DISKGROUP REBALANCE THROTTLE"],"validation":"Rebalance completes with under 10 percent OLTP impact","tag":"lab"},
-      {"id":69,"title":"Cluster Interconnect Tuning","obj":"Diagnose and tune RAC interconnect on Exadata IB","scenario":"High gc buffer busy waits - interconnect suspected","tasks":["Check IB link stats: ibstat and ifconfig","Query GV$SYSSTAT for gc cr blocks received","Verify InfiniBand configuration with oifcfg"],"validation":"GC waits reduced, interconnect at line rate","tag":"lab"},
-      {"id":70,"title":"Test Failover End-to-End","obj":"Simulate and validate complete HA failover","scenario":"Annual DR test: verify RTO under 30 minutes","tasks":["Simulate primary node failure","Verify TAF/FCF reconnects applications","Measure RTO from failure to reconnect"],"validation":"RTO achieved within target, no data loss","tag":"lab"},
-    ],
-    "Patching & Upgrade":[
-      {"id":71,"title":"Apply DB Release Update","obj":"Apply quarterly Release Update to Oracle DB","scenario":"Critical bug fix requires RU 19.22 application","tasks":["Run opatch prereq CheckMinimumComputerRequirements","opatchauto apply RU patch on GI and DB","Validate with opatch lspatches and run utlrp.sql"],"validation":"New RU active, no invalid objects","tag":"demo"},
-      {"id":72,"title":"Patch Grid Infrastructure Rolling","obj":"Apply GI patch without cluster downtime","scenario":"Monthly patch cycle: GI patch required","tasks":["opatchauto apply with -rolling flag on node 1","Verify node 1 patched, services moved back","Repeat on node 2"],"validation":"All nodes on same GI version, cluster healthy","tag":"lab"},
-      {"id":73,"title":"Patch Exadata Cell Nodes","obj":"Apply storage server software patch","scenario":"Cell node patch for security CVE fix","tasks":["patchmgr prereq check on all cells","patchmgr -cells cellgroup -rolling patch","Verify cell version with cellcli LIST CELL"],"validation":"All cells updated, no storage interruption","tag":"lab"},
-      {"id":74,"title":"Rollback a Failed Patch","obj":"Rollback GI or DB patch after failure","scenario":"RU patch caused ORA-600 - emergency rollback","tasks":["opatchauto rollback patch on affected node","Verify previous version restored","Test application connectivity"],"validation":"Previous version restored, application functional","tag":"lab"},
-      {"id":75,"title":"Upgrade Database 19c to 23ai","obj":"Perform in-place database upgrade","scenario":"Planned upgrade to Oracle 23ai for new AI features","tasks":["Run preupgrade.jar and fix all issues","Perform upgrade using dbupgrade or DBUA","Run postupgrade_fixups.sql and utlrp.sql"],"validation":"DB on 23ai, no invalid objects, apps verified","tag":"demo"},
-    ],
-    "Security Advanced":[
-      {"id":76,"title":"Enable Transparent Data Encryption","obj":"Encrypt tablespaces using TDE","scenario":"Compliance requirement: encrypt PII tablespace at rest","tasks":["Configure software keystore","ADMINISTER KEY MANAGEMENT CREATE KEYSTORE","ALTER TABLESPACE ENCRYPT USING AES256"],"validation":"Tablespace encrypted, performance within 5 percent overhead","tag":"lab"},
-      {"id":77,"title":"Rotate TDE Wallet Keys","obj":"Perform TDE master key rotation without downtime","scenario":"Annual key rotation policy compliance","tasks":["ADMINISTER KEY MANAGEMENT CREATE NEW MASTER ENCRYPTION KEY","Verify old keys backed up","Confirm encryption still active after rotation"],"validation":"New key active, all tablespaces accessible","tag":"lab"},
-      {"id":78,"title":"Audit Critical Operations","obj":"Implement fine-grained audit for privileged operations","scenario":"Audit all DDL and privileged DML on FINANCE schema","tasks":["CREATE AUDIT POLICY for DDL on FINANCE schema","Enable audit for SYS operations","Query UNIFIED_AUDIT_TRAIL for violations"],"validation":"All critical operations captured in audit trail","tag":"lab"},
-      {"id":79,"title":"Mask Sensitive Data","obj":"Apply Oracle Data Masking for non-production environments","scenario":"GDPR: mask PII before copying prod to dev","tasks":["Define masking definitions for PII columns","Apply masking using DBMS_REDACT","Verify masked values in dev copy"],"validation":"No real PII visible in masked environment","tag":"lab"},
-      {"id":80,"title":"Implement Least Privilege","obj":"Audit and reduce excessive user privileges","scenario":"Security audit found users with DBA role who do not need it","tasks":["Query DBA_SYS_PRIVS and DBA_ROLE_PRIVS","Identify and document over-privileged accounts","REVOKE unnecessary privileges and test"],"validation":"All accounts follow least privilege principle","tag":"lab"},
-    ],
-    "Automation":[
-      {"id":81,"title":"Write DB Health Check Script","obj":"Build comprehensive shell and SQL health check","scenario":"Automate daily health check to replace manual work","tasks":["Script: cluster status, DG health, backup status","Add Exadata cell checks via DCLI","Output HTML or text report with RAG status"],"validation":"Script runs end-to-end, covers all key checks","tag":"lab"},
-      {"id":82,"title":"Automate RMAN Backup","obj":"Create scheduled RMAN backup with error handling","scenario":"Replace manual RMAN with automated daily backup","tasks":["Write RMAN backup script with channels and retention","Add cron or scheduler job","Implement email alert on failure"],"validation":"Backup runs daily, alert fires on failure","tag":"lab"},
-      {"id":83,"title":"Use Ansible for DB Tasks","obj":"Automate routine DBA tasks with Ansible playbooks","scenario":"Config drift on 10-node RAC - standardize with Ansible","tasks":["Write playbook for OS parameter tuning","Playbook for sqlnet.ora and listener management","Run against all nodes idempotently"],"validation":"Playbook runs idempotently, config standardized","tag":"demo"},
-      {"id":84,"title":"Schedule DBMS_SCHEDULER Jobs","obj":"Create and manage Oracle Scheduler jobs","scenario":"Automate stats gathering and space reporting","tasks":["CREATE SCHEDULE and PROGRAM objects","CREATE JOB linking program to schedule","Monitor with DBA_SCHEDULER_JOB_RUN_DETAILS"],"validation":"Jobs run on schedule, results logged","tag":"lab"},
-      {"id":85,"title":"Automate Alerting","obj":"Build proactive alert system for key DB metrics","scenario":"Catch issues before users notice - automated alerts","tasks":["Script to check tablespace, ASM, DG lag, backup","Send email alert on threshold breach","Test with simulated threshold breach"],"validation":"Alerts fire within 5 minutes of threshold breach","tag":"lab"},
-    ],
-  }},
-  "L4": {"label":"L4 – Expert / Real-World Scenarios","color":"#e74c3c","icon":"🔴","groups":{
-    "Incident Response":[
-      {"id":86,"title":"DB Crash: Diagnose ORA-00600","obj":"Investigate and resolve internal Oracle error ORA-00600","scenario":"Production DB crashed with ORA-00600 at 2am","tasks":["Analyze alert log and trace file for ORA-600 args","Search MOS for matching bug ID","Apply workaround or patch, document RCA"],"validation":"DB stable, RCA documented, SR raised if needed","tag":"lab"},
-      {"id":87,"title":"ASM Diskgroup Unexpectedly Dismounted","obj":"Recover dismounted ASM diskgroup","scenario":"DATA diskgroup dismounted during business hours - apps failing","tasks":["Check V$ASM_DISKGROUP for status and errors","Identify failed disks causing dismount","ALTER DISKGROUP DATA MOUNT FORCE and recover"],"validation":"Diskgroup remounted, data consistent, apps reconnected","tag":"lab"},
-      {"id":88,"title":"Cell Node Hardware Failure","obj":"Manage complete cell server failure","scenario":"CEL03 unresponsive - all disks offline in ASM","tasks":["Verify cell is truly down via ping and ILOM","Monitor ASM drops cell disks and watch rebalance","Coordinate hardware replacement, rebuild cell, re-add disks"],"validation":"ASM redundancy restored after cell replacement","tag":"lab"},
-      {"id":89,"title":"High IO Latency Investigation","obj":"Diagnose and resolve sudden IO latency spike","scenario":"cell single block physical read spiked to 50ms","tasks":["Check cell metrics CD_IO_RQMN_RD_SM via DCLI","Identify slow cells or disks","Check for IB degradation or cell CPU saturation"],"validation":"Latency back to under 1ms, root cause identified","tag":"lab"},
-      {"id":90,"title":"Backup Failure: Gap Recovery","obj":"Recover from backup failure leaving archive log gap","scenario":"Last 3 nights of RMAN backups failed silently","tasks":["LIST ARCHIVELOG to find gap","Verify archivelogs still on disk","Emergency backup of missing archivelogs immediately"],"validation":"Backup chain complete and recoverable","tag":"lab"},
-    ],
-    "Performance War Rooms":[
-      {"id":91,"title":"Batch Job Slow: Smart Scan Not Firing","obj":"Diagnose and fix Smart Scan disabled for batch job","scenario":"Month-end batch running 5x slower - Smart Scan not used","tasks":["Verify cell_offload_processing=true in session","Check if table is direct-path read eligible","Verify no HCC corruption or encryption blocking offload"],"validation":"Smart Scan enabled, batch time reduced by 70 percent","tag":"lab"},
-      {"id":92,"title":"Flash Cache Inefficiency","obj":"Diagnose poor flash cache hit ratio","scenario":"Flash cache hit ratio at 10 percent - should be above 80","tasks":["Check object-level flash cache stats","Identify cache churn from large sequential scans","Pin critical objects via CELL_FLASH_CACHE"],"validation":"Hit ratio above 80 percent for OLTP objects","tag":"lab"},
-      {"id":93,"title":"High GC Wait Events","obj":"Resolve Global Cache wait events in RAC","scenario":"gc cr multi block request waits at 30ms","tasks":["Query GV$SYSSTAT for GC block stats","Identify hot objects causing GC contention","Resequence or partition hot objects, review application"],"validation":"GC waits reduced to under 2ms","tag":"lab"},
-      {"id":94,"title":"Memory Leak Diagnosis","obj":"Identify and resolve PGA or SGA memory leak","scenario":"SGA usage growing 500MB per day - OOM risk in 2 weeks","tasks":["Monitor V$SGA_DYNAMIC_COMPONENTS growth","Check V$PROCESS for runaway PGA consumers","Identify memory leak in custom Java or PL/SQL code"],"validation":"Memory growth stopped, leak identified and fixed","tag":"lab"},
-      {"id":95,"title":"Parallel Query Imbalance","obj":"Fix skewed parallel execution across RAC nodes","scenario":"Parallel query using 32 slaves but only 2 nodes - severe skew","tasks":["Check V$PQ_SLAVE for slave distribution","Identify data skew causing slave imbalance","Fix: redistribute data, DISTRIBUTE hint, or partition"],"validation":"Parallel slaves evenly distributed, linear scaling","tag":"lab"},
-    ],
-    "Disaster Recovery":[
-      {"id":96,"title":"Full DC Outage Simulation","obj":"Simulate complete datacenter loss and recovery procedure","scenario":"Primary DC unavailable - activate DR site","tasks":["Verify standby is in sync via last RTO check","DGMGRL FAILOVER TO standby","Redirect DNS and load balancer to DR site, verify apps"],"validation":"DR site operational within RTO target","tag":"demo"},
-      {"id":97,"title":"DR Failover and Full Validation","obj":"Validate DR environment fully functional post-failover","scenario":"Post-failover: validate every application and data integrity","tasks":["Run application smoke tests on DR","Verify data consistency with rowcount checks","Validate backup continues running on DR"],"validation":"DR environment 100 percent functional, no data loss","tag":"lab"},
-      {"id":98,"title":"Re-sync Standby After Gap","obj":"Recover standby from large redo gap","scenario":"Standby network outage caused 6-hour gap","tasks":["Check gap via V$ARCHIVE_GAP","Ship missing archivelogs manually if needed","Restart MRP and verify gap closes"],"validation":"Standby in sync, apply lag under 30 seconds","tag":"lab"},
-      {"id":99,"title":"Test RTO and RPO","obj":"Measure and document actual RTO/RPO in DR test","scenario":"Annual DR test: formally measure and document RTO/RPO","tasks":["Define failure injection method","Time from failure to detection, failover, app reconnect","Measure data loss window for RPO"],"validation":"RTO and RPO documented and within SLA targets","tag":"lab"},
-      {"id":100,"title":"Split Brain Scenario Resolution","obj":"Detect and resolve RAC split-brain condition","scenario":"Network partition causes both nodes to think they are primary","tasks":["Identify split brain from ocssd.log and voting disk behavior","Determine which node survived via voting disk","Restart CRS on evicted node and re-join safely"],"validation":"Cluster healthy, no data divergence","tag":"lab"},
-    ],
-    "Architecture & Optimization":[
-      {"id":101,"title":"Design OLTP Workload on Exadata","obj":"Architect Exadata configuration optimized for OLTP","scenario":"New OLTP: 50K TPS, under 5ms response, 24x7","tasks":["Design ASM diskgroup layout with NORMAL redundancy","Configure Smart Flash Cache for OLTP hot blocks","Set IORM: OLTP priority, disable batch during peak"],"validation":"Architecture document with performance targets validated","tag":"demo"},
-      {"id":102,"title":"Design DW Workload with HCC","obj":"Architect Exadata for data warehouse with HCC compression","scenario":"2PB data warehouse migration to Exadata X8M","tasks":["Choose HCC level: QUERY HIGH for active, ARCHIVE HIGH for cold","Design partition strategy for Smart Scan eligibility","Calculate compression ratio and storage savings"],"validation":"DW design document with 10x compression target","tag":"demo"},
-      {"id":103,"title":"Optimize Hybrid OLTP + DW Workload","obj":"Tune Exadata for mixed workload using IORM and HCC","scenario":"Single Exadata for both OLTP and overnight DW","tasks":["Configure IORM: OLTP share=8 day, DW share=8 night","Implement Resource Manager DB plan","Monitor wait events for both workloads during peak"],"validation":"Both workloads meet SLA, no starvation","tag":"lab"},
-      {"id":104,"title":"Capacity Planning for Exadata","obj":"Build capacity model for 18-month growth","scenario":"Database growing 30 percent YoY - plan next Exadata expansion","tasks":["Collect current storage and CPU utilization trends","Model 18-month projection with growth rate","Identify when half-rack needs expansion to full-rack"],"validation":"Capacity model with expansion timeline","tag":"demo"},
-      {"id":105,"title":"Cost vs Performance Tuning Decision","obj":"Evaluate trade-offs between optimization strategies","scenario":"Query runs 2 hours - multiple fix options at different cost","tasks":["Option A: Add index - quick and cheap","Option B: Rewrite query - medium effort","Option C: Add cell node - expensive but permanent - analyze each option"],"validation":"Decision matrix with recommendation and justification","tag":"demo"},
-    ],
-  }},
+# =============================================================================
+# RACK MODEL SPECS
+# =============================================================================
+RACK_SPECS = {
+    "Eighth Rack": {"compute": 2, "cells": 3, "ib": 2},
+    "Quarter Rack": {"compute": 2, "cells": 3, "ib": 2},
+    "Half Rack":    {"compute": 4, "cells": 7, "ib": 2},
+    "Full Rack":    {"compute": 8, "cells": 14, "ib": 3},
 }
 
-LEVEL_COLORS = {"L1":"#5da8e8","L2":"#5dc888","L3":"#f39c12","L4":"#e74c3c"}
-LEVEL_ICONS  = {"L1":"🔵","L2":"🟢","L3":"🟡","L4":"🔴"}
-TAG_LABEL    = {"demo":"🔵 DEMO","lab":"🟢 LAB","quiz":"🔴 QUIZ"}
+X8M_SPECS_TEXT = """
+COMPUTE NODE (X8M-2): 2x Xeon 8260 = 48 cores, up to 1.5TB DDR4,
+3.2TB Optane PMEM, 2x200Gb IB HDR, Oracle Linux 8.
+STORAGE CELL (X8M-2): 12x7.2TB HDD = 86.4TB, 4x6.4TB NVMe = 25.6TB,
+1.5TB PMEM write-back, 2x200Gb IB HDR, cellsrv/MS/RS.
+IB FABRIC: 200 Gb/s HDR, fat-tree, RDMA sub-microsecond.
+"""
 
+# =============================================================================
+# LAB CATALOG (representative labs — expand as needed up to 105)
+# =============================================================================
+LAB_CATALOG = {
+    "L1 — Basic Operations": [
+        {"id": 1, "title": "Create a PDB", "tag": "demo",
+         "obj": "Create a new pluggable database from seed",
+         "scenario": "Dev team needs a fresh PDB called DEVPDB for testing.",
+         "tasks": ["Connect to CDB$ROOT", "CREATE PLUGGABLE DATABASE DEVPDB", "Open PDB read write"],
+         "validation": "SELECT name, open_mode FROM v$pdbs;"},
+        {"id": 2, "title": "Check Cluster Status", "tag": "lab",
+         "obj": "Verify RAC cluster is healthy across all compute nodes",
+         "scenario": "Morning health check — confirm CRS, cluster, and DB resources are online.",
+         "tasks": ["Run crsctl check cluster -all", "Run srvctl status database -d ORCL", "Check asmcmd lsdg"],
+         "validation": "All instances ONLINE, no offline resources in crsctl stat res -t."},
+        {"id": 3, "title": "List Exadata Cells", "tag": "demo",
+         "obj": "Use CellCLI to inventory storage cells",
+         "scenario": "You just SSH'd into cel01 and want to see cluster-wide cell status.",
+         "tasks": ["cellcli -e list cell detail", "dcli across cellgroup", "Check IB link status"],
+         "validation": "All cells show status=online, no alerts."},
+        {"id": 4, "title": "Quiz — Exadata Basics", "tag": "quiz",
+         "obj": "Test fundamental Exadata knowledge",
+         "scenario": "3 MCQ questions on Smart Scan, IB, and storage indexes.",
+         "tasks": ["Answer 3 MCQ questions"],
+         "validation": "Score 3/3 to pass."},
+    ],
+    "L2 — Intermediate Operations": [
+        {"id": 27, "title": "Add Disk to Diskgroup", "tag": "lab",
+         "obj": "Expand DATAC1 by adding new grid disks from an added cell",
+         "scenario": "DATAC1 diskgroup at 78% — add capacity from new grid disks on cel04.",
+         "tasks": ["Create celldisks on new cell", "Create grid disks with correct naming",
+                   "ALTER DISKGROUP DATAC1 ADD DISK", "Monitor rebalance via V$ASM_OPERATION"],
+         "validation": "V$ASM_DISKGROUP shows increased total_mb, rebalance completes."},
+        {"id": 42, "title": "Data Guard Switchover", "tag": "demo",
+         "obj": "Perform a graceful role reversal between primary and standby",
+         "scenario": "Planned DC maintenance — switchover ORCL_PRI to ORCL_STBY.",
+         "tasks": ["DGMGRL> show configuration",
+                   "DGMGRL> switchover to ORCL_STBY",
+                   "Verify new primary is open read-write"],
+         "validation": "show configuration displays SUCCESS with roles reversed."},
+        {"id": 48, "title": "RMAN Incremental Backup", "tag": "lab",
+         "obj": "Run a level-1 incremental backup to FRA",
+         "scenario": "Nightly incremental after Sunday's level-0.",
+         "tasks": ["rman target /", "BACKUP INCREMENTAL LEVEL 1 DATABASE", "List backups"],
+         "validation": "LIST BACKUP SUMMARY shows new incremental backupset."},
+    ],
+    "L3 — Advanced Operations": [
+        {"id": 57, "title": "Smart Scan Verification", "tag": "lab",
+         "obj": "Prove a query is offloaded to the cells",
+         "scenario": "A full-table scan on SALES isn't fast — verify Smart Scan is active.",
+         "tasks": ["Run query with /*+ FULL(t) */",
+                   "Check V$SQL cell offload efficiency",
+                   "Check cell_physical_IO_bytes_saved_by_storage_index"],
+         "validation": "offload efficiency > 80%, bytes saved by SI > 0."},
+        {"id": 73, "title": "Rolling Cell Patch", "tag": "demo",
+         "obj": "Apply a storage cell image update with zero downtime",
+         "scenario": "Patch cel01 to latest image while DB stays online.",
+         "tasks": ["alter griddisk all inactive (on one cell)",
+                   "patchmgr -cells cel01 -patch",
+                   "alter griddisk all active and validate rebalance"],
+         "validation": "All grid disks ONLINE, no data loss, image version updated."},
+    ],
+    "L4 — Expert / Real-World": [
+        {"id": 88, "title": "IORM Runaway Workload", "tag": "lab",
+         "obj": "Use I/O Resource Manager to contain a noisy neighbor",
+         "scenario": "ETL job is starving OLTP — latency spiked to 80ms. Fix it now.",
+         "tasks": ["Diagnose using V$IOSTAT_FILE and cell metrics",
+                   "Create IORM plan limiting ETL DB",
+                   "ALTER IORMPLAN and validate"],
+         "validation": "OLTP avg latency returns below 5ms."},
+        {"id": 97, "title": "Cell Failure Recovery", "tag": "demo",
+         "obj": "Recover from total cell loss with HIGH redundancy",
+         "scenario": "cel03 powered off unexpectedly. DATAC1 is HIGH redundancy — no data loss expected.",
+         "tasks": ["Confirm ASM auto-drops offline disks after DISK_REPAIR_TIME",
+                   "Replace cell, rebuild celldisks/griddisks",
+                   "ALTER DISKGROUP ADD DISK and rebalance"],
+         "validation": "DATAC1 returns to HIGH redundancy, no corruption."},
+    ],
+}
 
-# ─────────────────────────────────────────────────────────────────────────────
+# =============================================================================
 # SESSION STATE
-# ─────────────────────────────────────────────────────────────────────────────
-DEFAULTS = {
+# =============================================================================
+defaults = {
     "openai_key": "",
     "openai_model": "gpt-4o",
     "rack": "Half Rack",
-    "cells": 7,
-    "compute": 4,
-    "dg": "DATA+RECO",
+    "dg": "DATAC1+RECOC1",
     "role": "DBA",
     "level": "Intermediate",
-    "current_level": "L1",
-    "current_group": "Database & PDB",
-    "current_lab_id": 1,
-    "messages": [],
-    "tasks_done": set(),
-    "score": 0,
-    "labs_completed": 0,
-    "tasks_completed": 0,
+    "current_lab": None,
+    "chat": [],
+    "term_history": [],
 }
-for k, v in DEFAULTS.items():
+for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# HELPERS
-# ─────────────────────────────────────────────────────────────────────────────
-def env_ctx():
-    sw = {"1/8 Rack": 1, "Quarter Rack": 1, "Half Rack": 2, "Full Rack": 3}.get(st.session_state.rack, 2)
-    return (f"Rack={st.session_state.rack}, Cells={st.session_state.cells}, "
-            f"Compute={st.session_state.compute}, IB_Switches={sw}, "
-            f"DGs={st.session_state.dg}, Role={st.session_state.role}, "
-            f"Level={st.session_state.level}")
-
-
-def get_current_lab():
-    lvl = st.session_state.current_level
-    grp = st.session_state.current_group
-    lid = st.session_state.current_lab_id
-    groups = LAB_CATALOG[lvl]["groups"]
-    for lab in groups.get(grp, []):
-        if lab["id"] == lid:
-            return lab
-    # fallback to first lab
-    first_grp = list(groups.keys())[0]
-    return groups[first_grp][0]
-
-
-def system_prompt():
-    lab = get_current_lab()
-    lvl = st.session_state.current_level
-    return f"""You are ExaSimBot — Oracle Exadata X8M DBA/DMA Hands-On Lab Trainer.
-ENVIRONMENT: {env_ctx()}
-LEVEL: {lvl} | Lab #{lab["id"]}: {lab["title"]}
-Objective: {lab["obj"]}
-Scenario: {lab["scenario"]}
-Tasks: {" | ".join([f"{i+1}. {t}" for i, t in enumerate(lab["tasks"])])}
-Validation: {lab["validation"]}
-
-RULES:
-1. Commands ALWAYS in triple-backtick code blocks with correct prompt prefix (CellCLI>, SQL>, DGMGRL>, $, #)
-2. Show realistic simulated Exadata output after every command
-3. LAB steps: demo the command first, then end with a clear YOUR TURN exercise
-4. QUIZ: MCQ A/B/C/D format, score as CORRECT or WRONG with explanation
-5. Adapt depth: Basic=concepts, Intermediate=full procedure, Advanced=internals+edge cases
-6. DBA role: SQL/ASM/RMAN/srvctl focus | DMA role: hardware/firmware/ILOM/patchmgr focus
-7. L4 incident labs: present symptoms first, ask user to diagnose before revealing answer
-
-X8M SPECS:
-- Compute X8M-2: 2x Intel Cascade Lake-SP 8260 (48 cores total), 6TB DDR4, 3.2TB PMEM/node, 2x200Gb IB HDR
-- Cell X8M-2: 12x7.2TB HDD + 4x6.4TB NVMe + 1.5TB PMEM, 2x200Gb IB
-- Full rack: 8 compute + 14 cells + 3 IB switches | Half: 4+7+2 | Quarter: 2+3+1
-- CellDisk: CD_00_dm01cel01 through CD_15_dm01cel01
-- GridDisk: DATAC1_CD_00_dm01cel01, RECOC1_CD_00_dm01cel01
-- DCLI: dcli -g /etc/oracle/cell/network-config/cellgroup -l root cellcli -e "command"
-- CellCLI prompt: CellCLI> (run as root on cell server)
-- DBMCLI prompt: DBMCLI> (run as root on compute node)
-Max 500 words. Be practical and example-driven."""
-
-
-def task_key(lid, tidx):
-    return f"lab{lid}_t{tidx}"
-
-
-def mark_task_done(lid, tidx):
-    k = task_key(lid, tidx)
-    if k not in st.session_state.tasks_done:
-        st.session_state.tasks_done.add(k)
-        st.session_state.tasks_completed += 1
-        st.session_state.score += 10
-
-
-def get_lab_progress(lid, tasks):
-    done = sum(1 for i in range(len(tasks)) if task_key(lid, i) in st.session_state.tasks_done)
-    return done, len(tasks)
-
-
-def build_rack_html():
-    sw_n = {"1/8 Rack": 1, "Quarter Rack": 1, "Half Rack": 2, "Full Rack": 3}.get(st.session_state.rack, 2)
-    parts = [
-        '<span class="ru ru-infra">PDU</span>',
-        '<span class="ru ru-infra">KVM</span>',
-    ]
-    for i in range(1, sw_n + 1):
-        parts.append(f'<span class="ru ru-sw">IB-SW{i}</span>')
-    for i in range(1, st.session_state.compute + 1):
-        parts.append(f'<span class="ru ru-compute">DB{str(i).zfill(2)}</span>')
-    for i in range(1, st.session_state.cells + 1):
-        parts.append(f'<span class="ru ru-cell">CEL{str(i).zfill(2)}</span>')
-    return (
-        f'<div class="rack-box">'
-        f'<div class="rack-lbl">RACK — {st.session_state.rack} &middot; '
-        f'{st.session_state.cells} Storage Cells &middot; {st.session_state.compute} Compute Nodes</div>'
-        f'<div class="rack-units">{" ".join(parts)}</div></div>'
-    )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# OPENAI API — streamed
-# ─────────────────────────────────────────────────────────────────────────────
-def call_api(user_text: str, show_user: bool = True) -> str:
+# Try secrets
+try:
     if not st.session_state.openai_key:
-        st.markdown(
-            '<div class="chat-sys">Enter your OpenAI API key in the top config bar to start.</div>',
-            unsafe_allow_html=True,
-        )
-        return ""
+        st.session_state.openai_key = st.secrets.get("openai_key", "")
+except Exception:
+    pass
 
-    if show_user:
-        st.markdown(f'<div class="chat-user">👤 {user_text}</div>', unsafe_allow_html=True)
-
-    messages = [{"role": "system", "content": system_prompt()}]
-    for m in st.session_state.messages[-18:]:
-        messages.append({"role": m["role"], "content": m["content"]})
-    messages.append({"role": "user", "content": user_text})
-
-    placeholder = st.empty()
-    full_text = ""
-    try:
-        client = OpenAI(api_key=st.session_state.openai_key)
-        stream = client.chat.completions.create(
-            model=st.session_state.openai_model,
-            messages=messages,
-            max_tokens=1500,
-            temperature=0.4,
-            stream=True,
-        )
-        for chunk in stream:
-            delta = chunk.choices[0].delta.content if chunk.choices else None
-            if delta:
-                full_text += delta
-                placeholder.markdown(
-                    f'<div class="chat-bot">{full_text}&#9646;</div>',
-                    unsafe_allow_html=True,
-                )
-        placeholder.markdown(f'<div class="chat-bot">{full_text}</div>', unsafe_allow_html=True)
-
-    except Exception as e:
-        err = str(e)
-        if "401" in err or "Incorrect API key" in err:
-            full_text = "Invalid API key. Check the key in the top config bar."
-        elif "429" in err:
-            full_text = "Rate limit hit. Wait a moment and retry."
-        elif "model" in err.lower() or "404" in err:
-            full_text = f"Model not found. Try gpt-4o or gpt-4-turbo. Detail: {err}"
-        else:
-            full_text = f"OpenAI error: {err}"
-        placeholder.markdown(f'<div class="chat-bot">{full_text}</div>', unsafe_allow_html=True)
-
-    st.session_state.messages.append({"role": "user", "content": user_text})
-    st.session_state.messages.append({"role": "assistant", "content": full_text})
-    return full_text
-
-
-def start_lab(lab: dict):
-    st.session_state.messages = []
-    prompt = (
-        f"[LAB #{lab['id']}: {lab['title']}] Level: {st.session_state.current_level} | {env_ctx()}\n\n"
-        f"Objective: {lab['obj']}\nScenario: {lab['scenario']}\n\n"
-        f"Set the scene in 2-3 sentences. Then begin Task 1 with a demo command and "
-        f"realistic Exadata output. End Task 1 with a YOUR TURN exercise."
-    )
-    with st.spinner(f"Loading Lab #{lab['id']}: {lab['title']}..."):
-        call_api(prompt, show_user=False)
-
-
-def quick_send(text: str):
-    call_api(text)
-    st.rerun()
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# TOP BANNER
-# ─────────────────────────────────────────────────────────────────────────────
-api_ok = bool(st.session_state.openai_key)
-st.markdown(f"""
-<div class="top-banner">
-  <div>
-    <div class="t-logo">Oracle Exadata</div>
-    <div class="t-title">X8M DBA / DMA Hands-On Lab Simulator &nbsp;&middot;&nbsp; 105 Labs · 4 Levels</div>
-  </div>
-  <div class="t-pills">
-    <span class="pill">Labs <b>{st.session_state.labs_completed}</b></span>
-    <span class="pill">Tasks <b>{st.session_state.tasks_completed}</b></span>
-    <span class="pill">Score <b>{st.session_state.score}</b></span>
-    <span class="{'st-ok' if api_ok else 'st-err'}">
-      {'✅ OpenAI connected' if api_ok else '⚠️ No API key'}
-    </span>
-  </div>
+# =============================================================================
+# HEADER
+# =============================================================================
+st.markdown("""
+<div style="border-bottom:1px solid #1a2c47;padding-bottom:12px;margin-bottom:18px;">
+  <div class="brand-title">▸ ORACLE EXADATA X8M — LAB SIMULATOR</div>
+  <div class="brand-sub">DBA/DMA Hands-On Trainer • ExaSimBot (GPT-4o) • Prashant | Oracle ACE (Apprentice)</div>
 </div>
 """, unsafe_allow_html=True)
 
+# =============================================================================
+# CONFIG BAR
+# =============================================================================
+with st.container():
+    c1, c2, c3, c4, c5, c6 = st.columns([2, 1.2, 1.2, 1.4, 1, 1])
+    with c1:
+        st.session_state.openai_key = st.text_input(
+            "OpenAI API Key", value=st.session_state.openai_key,
+            type="password", placeholder="sk-...")
+    with c2:
+        st.session_state.openai_model = st.selectbox(
+            "Model", ["gpt-4o", "gpt-4-turbo", "gpt-4o-mini", "gpt-3.5-turbo"],
+            index=["gpt-4o","gpt-4-turbo","gpt-4o-mini","gpt-3.5-turbo"].index(st.session_state.openai_model))
+    with c3:
+        st.session_state.rack = st.selectbox(
+            "Rack Size", list(RACK_SPECS.keys()),
+            index=list(RACK_SPECS.keys()).index(st.session_state.rack))
+    with c4:
+        st.session_state.dg = st.selectbox(
+            "ASM Disk Groups", ["DATA+RECO", "DATAC1+RECOC1", "DATAC1+RECOC1+FLASH"],
+            index=["DATA+RECO","DATAC1+RECOC1","DATAC1+RECOC1+FLASH"].index(st.session_state.dg))
+    with c5:
+        st.session_state.role = st.selectbox(
+            "Role", ["DBA", "DMA", "Both"],
+            index=["DBA","DMA","Both"].index(st.session_state.role))
+    with c6:
+        st.session_state.level = st.selectbox(
+            "Level", ["Basic", "Intermediate", "Advanced"],
+            index=["Basic","Intermediate","Advanced"].index(st.session_state.level))
 
-# ─────────────────────────────────────────────────────────────────────────────
-# HORIZONTAL CONFIG BAR
-# ─────────────────────────────────────────────────────────────────────────────
-c1, c2, c3, c4, c5, c6, c7, c8, c9 = st.columns([2.2, 1.4, 1.1, 1.0, 1.0, 1.1, 1.0, 1.3, 1.0])
+specs = RACK_SPECS[st.session_state.rack]
+COMPUTE, CELLS, IB = specs["compute"], specs["cells"], specs["ib"]
 
-with c1:
-    k = st.text_input("OpenAI API Key", type="password",
-                      value=st.session_state.openai_key, placeholder="sk-...")
-    if k:
-        st.session_state.openai_key = k
+# =============================================================================
+# DYNAMIC ARCHITECTURE DIAGRAM (SVG)
+# =============================================================================
+def build_diagram(compute, cells, ib, rack_name):
+    W, H = 900, 520
+    # Compute row
+    cw = min(110, (W - 80) // compute - 14)
+    cw_total = compute * (cw + 14) - 14
+    cx0 = (W - cw_total) // 2
+    cy = 70
+    ch = 55
 
-with c2:
-    mdl_opts = ["gpt-4o", "gpt-4-turbo", "gpt-4o-mini", "gpt-3.5-turbo"]
-    cur = st.session_state.openai_model if st.session_state.openai_model in mdl_opts else "gpt-4o"
-    st.session_state.openai_model = st.selectbox("Model", mdl_opts, index=mdl_opts.index(cur))
+    # IB row
+    iw = 150
+    iw_total = ib * (iw + 24) - 24
+    ix0 = (W - iw_total) // 2
+    iy = 200
+    ih = 44
 
-with c3:
-    rack_opts = ["1/8 Rack", "Quarter Rack", "Half Rack", "Full Rack"]
-    rack = st.selectbox("Rack", rack_opts, index=rack_opts.index(st.session_state.rack))
+    # Cells row
+    sw = min(90, (W - 80) // cells - 10)
+    sw_total = cells * (sw + 10) - 10
+    sx0 = (W - sw_total) // 2
+    sy = 310
+    sh = 72
 
-with c4:
-    cells = st.selectbox("Cells", [3, 7, 14, 18], index=[3, 7, 14, 18].index(st.session_state.cells))
+    svg = [f'<svg viewBox="0 0 {W} {H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">']
+    svg.append('''
+    <defs>
+      <linearGradient id="gc" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#0a4a8a"/><stop offset="100%" stop-color="#062547"/>
+      </linearGradient>
+      <linearGradient id="gs" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#005a35"/><stop offset="100%" stop-color="#002818"/>
+      </linearGradient>
+      <linearGradient id="gi" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#4a2288"/><stop offset="100%" stop-color="#1e0a42"/>
+      </linearGradient>
+      <filter id="glow"><feGaussianBlur stdDeviation="2.5"/></filter>
+    </defs>
+    ''')
 
-with c5:
-    compute = st.selectbox("Compute", [2, 4, 8], index=[2, 4, 8].index(st.session_state.compute))
+    # Title bar
+    svg.append(f'<rect x="0" y="0" width="{W}" height="32" fill="#0a1220"/>')
+    svg.append(f'<text x="{W//2}" y="21" text-anchor="middle" font-family="Orbitron" '
+               f'font-size="13" fill="#f39c12" letter-spacing="3">'
+               f'[ {rack_name.upper()} — {compute} COMPUTE • {cells} CELLS • {ib} IB HDR ]</text>')
 
-with c6:
-    dg_opts = ["DATA+RECO", "DATAC1+RECOC1", "+FLASH"]
-    cur_dg = st.session_state.dg if st.session_state.dg in dg_opts else "DATA+RECO"
-    dg = st.selectbox("ASM DG", dg_opts, index=dg_opts.index(cur_dg))
+    # Section labels
+    svg.append('<text x="20" y="60" font-family="Rajdhani" font-size="11" '
+               'fill="#6a8faa" letter-spacing="2">DATABASE TIER (X8M-2)</text>')
+    svg.append('<text x="20" y="190" font-family="Rajdhani" font-size="11" '
+               'fill="#6a8faa" letter-spacing="2">INFINIBAND HDR FABRIC — 200 Gb/s</text>')
+    svg.append('<text x="20" y="300" font-family="Rajdhani" font-size="11" '
+               'fill="#6a8faa" letter-spacing="2">STORAGE TIER (X8M-2 CELLS)</text>')
 
-with c7:
-    role = st.selectbox("Role", ["DBA", "DMA", "Both"],
-                        index=["DBA", "DMA", "Both"].index(st.session_state.role))
+    # Compute nodes
+    comp_centers = []
+    for i in range(compute):
+        x = cx0 + i * (cw + 14)
+        cxc = x + cw // 2
+        comp_centers.append((cxc, cy + ch))
+        svg.append(f'<rect x="{x}" y="{cy}" width="{cw}" height="{ch}" rx="5" '
+                   f'fill="url(#gc)" stroke="#0088ff" stroke-width="1.5"/>')
+        svg.append(f'<text x="{cxc}" y="{cy+20}" text-anchor="middle" font-family="Orbitron" '
+                   f'font-size="11" fill="#66c2ff" font-weight="700">exadb0{i+1}</text>')
+        svg.append(f'<text x="{cxc}" y="{cy+35}" text-anchor="middle" '
+                   f'font-family="Share Tech Mono" font-size="9" fill="#c8dff8">48c • 1.5TB</text>')
+        svg.append(f'<text x="{cxc}" y="{cy+47}" text-anchor="middle" '
+                   f'font-family="Share Tech Mono" font-size="8" fill="#8ab4d8">+ASM{i+1} ORCL{i+1}</text>')
+        svg.append(f'<circle cx="{x+8}" cy="{cy+8}" r="3" fill="#00ff88">'
+                   f'<animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/></circle>')
 
-with c8:
-    level = st.selectbox("Level", ["Basic", "Intermediate", "Advanced"],
-                         index=["Basic", "Intermediate", "Advanced"].index(st.session_state.level))
+    # IB switches
+    ib_centers = []
+    for i in range(ib):
+        x = ix0 + i * (iw + 24)
+        ixc = x + iw // 2
+        ib_centers.append((ixc, iy, iy + ih))
+        svg.append(f'<rect x="{x}" y="{iy}" width="{iw}" height="{ih}" rx="4" '
+                   f'fill="url(#gi)" stroke="#8844ff" stroke-width="1.5"/>')
+        svg.append(f'<text x="{ixc}" y="{iy+18}" text-anchor="middle" font-family="Orbitron" '
+                   f'font-size="11" fill="#c8a0ff" font-weight="700">IB HDR SW{i+1}</text>')
+        svg.append(f'<text x="{ixc}" y="{iy+33}" text-anchor="middle" '
+                   f'font-family="Share Tech Mono" font-size="9" fill="#c8dff8">200 Gb/s • RDMA</text>')
 
-with c9:
-    st.markdown("<div style='height:26px'></div>", unsafe_allow_html=True)
-    if st.button("Apply", use_container_width=True, type="primary"):
-        st.session_state.rack = rack
-        st.session_state.cells = cells
-        st.session_state.compute = compute
-        st.session_state.dg = dg
-        st.session_state.role = role
-        st.session_state.level = level
-        st.session_state.messages = []
-        st.session_state.tasks_done = set()
-        st.session_state.score = 0
-        st.session_state.labs_completed = 0
-        st.session_state.tasks_completed = 0
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": (f"Config applied: {rack} | {cells} cells | {compute} compute | "
-                        f"{dg} | {role} | {level}\n\nSelect a lab from the sidebar to begin."),
-        })
-        st.rerun()
+    # Cells
+    cell_centers = []
+    for i in range(cells):
+        x = sx0 + i * (sw + 10)
+        sxc = x + sw // 2
+        cell_centers.append((sxc, sy))
+        svg.append(f'<rect x="{x}" y="{sy}" width="{sw}" height="{sh}" rx="4" '
+                   f'fill="url(#gs)" stroke="#00ff88" stroke-width="1.2"/>')
+        svg.append(f'<text x="{sxc}" y="{sy+16}" text-anchor="middle" font-family="Orbitron" '
+                   f'font-size="10" fill="#66ffb0" font-weight="700">cel{str(i+1).zfill(2)}</text>')
+        svg.append(f'<text x="{sxc}" y="{sy+32}" text-anchor="middle" '
+                   f'font-family="Share Tech Mono" font-size="8" fill="#c8dff8">86.4TB HDD</text>')
+        svg.append(f'<text x="{sxc}" y="{sy+45}" text-anchor="middle" '
+                   f'font-family="Share Tech Mono" font-size="8" fill="#c8dff8">25.6TB NVMe</text>')
+        svg.append(f'<text x="{sxc}" y="{sy+58}" text-anchor="middle" '
+                   f'font-family="Share Tech Mono" font-size="7" fill="#8ab4d8">1.5TB PMEM</text>')
+        svg.append(f'<circle cx="{x+8}" cy="{sy+8}" r="2.5" fill="#00ff88">'
+                   f'<animate attributeName="opacity" values="1;0.2;1" dur="{1.5+i*0.1}s" repeatCount="indefinite"/></circle>')
 
-st.markdown("<div style='height:2px'></div>", unsafe_allow_html=True)
+    # Links: compute -> IB
+    for cxc, cyc in comp_centers:
+        for ixc, iyt, _ in ib_centers:
+            svg.append(f'<line x1="{cxc}" y1="{cyc}" x2="{ixc}" y2="{iyt}" '
+                       f'stroke="#8844ff" stroke-width="1" stroke-opacity="0.5"/>')
+    # Links: IB -> cells
+    for ixc, _, iyb in ib_centers:
+        for sxc, syt in cell_centers:
+            svg.append(f'<line x1="{ixc}" y1="{iyb}" x2="{sxc}" y2="{syt}" '
+                       f'stroke="#8844ff" stroke-width="0.8" stroke-opacity="0.35"/>')
 
+    # Animated RDMA packets
+    for k in range(min(4, compute)):
+        c = comp_centers[k % len(comp_centers)]
+        ibx, iyt, iyb = ib_centers[k % len(ib_centers)]
+        cc = cell_centers[(k * 2) % len(cell_centers)]
+        path = f"M{c[0]},{c[1]} L{ibx},{iyt} L{ibx},{iyb} L{cc[0]},{cc[1]}"
+        svg.append(f'<circle r="3.5" fill="#f39c12" filter="url(#glow)">'
+                   f'<animateMotion dur="{2+k*0.4}s" repeatCount="indefinite" '
+                   f'path="{path}"/></circle>')
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR — Lab navigation only
-# ─────────────────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### 📚 Lab Catalog")
-    for lvl_key, lvl_data in LAB_CATALOG.items():
-        lc2 = lvl_data["color"]
-        li  = lvl_data["icon"]
-        st.markdown(
-            f"<span style='color:{lc2};font-size:11px;font-weight:700'>"
-            f"{li} {lvl_data['label']}</span>",
-            unsafe_allow_html=True,
+    # Bottom status bar
+    total_hdd = cells * 86.4
+    total_flash = cells * 25.6
+    hdd_str = f"{total_hdd/1000:.2f}PB" if total_hdd >= 1000 else f"{total_hdd:.0f}TB"
+    svg.append(f'<rect x="0" y="{H-30}" width="{W}" height="30" fill="#0a1220"/>')
+    svg.append(f'<text x="20" y="{H-11}" font-family="Share Tech Mono" font-size="10" fill="#00ff88">● CLUSTER: ONLINE</text>')
+    svg.append(f'<text x="180" y="{H-11}" font-family="Share Tech Mono" font-size="10" fill="#c8dff8">ASM RAW: {hdd_str}</text>')
+    svg.append(f'<text x="360" y="{H-11}" font-family="Share Tech Mono" font-size="10" fill="#f39c12">FLASH: {total_flash:.1f}TB</text>')
+    svg.append(f'<text x="530" y="{H-11}" font-family="Share Tech Mono" font-size="10" fill="#8844ff">IB: {ib}× 200Gb HDR</text>')
+    svg.append(f'<text x="700" y="{H-11}" font-family="Share Tech Mono" font-size="10" fill="#c8dff8">CORES: {compute*48}</text>')
+
+    svg.append('</svg>')
+    return "".join(svg)
+
+# =============================================================================
+# LAYOUT: architecture (left) + specs (right)
+# =============================================================================
+left, right = st.columns([2.4, 1])
+
+with left:
+    st.markdown('<div class="panel"><div class="panel-title">▸ Live Rack Topology</div>',
+                unsafe_allow_html=True)
+    st.markdown(build_diagram(COMPUTE, CELLS, IB, st.session_state.rack),
+                unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with right:
+    total_cores = COMPUTE * 48
+    total_hdd = CELLS * 86.4
+    total_flash = CELLS * 25.6
+    total_cell_pmem = CELLS * 1.5
+    hdd_disp = f"{total_hdd/1000:.2f} PB" if total_hdd >= 1000 else f"{total_hdd:.1f} TB"
+
+    st.markdown(f'''
+    <div class="panel">
+      <div class="panel-title">▸ Configuration Totals</div>
+      <div class="metric-pill">Compute <span class="v">{COMPUTE}</span></div>
+      <div class="metric-pill">Cells <span class="v">{CELLS}</span></div>
+      <div class="metric-pill">IB SW <span class="v">{IB}</span></div><br><br>
+      <div class="metric-pill">Cores <span class="v">{total_cores}</span></div>
+      <div class="metric-pill">HDD <span class="v">{hdd_disp}</span></div><br><br>
+      <div class="metric-pill">NVMe <span class="v">{total_flash:.1f} TB</span></div>
+      <div class="metric-pill">PMEM <span class="v">{total_cell_pmem:.1f} TB</span></div><br><br>
+      <div class="metric-pill">DG <span class="v">{st.session_state.dg}</span></div><br><br>
+      <div class="metric-pill">Role <span class="v">{st.session_state.role}</span></div>
+      <div class="metric-pill">Level <span class="v">{st.session_state.level}</span></div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+# =============================================================================
+# LAB SELECTION + CHAT + PRACTICE TERMINAL
+# =============================================================================
+st.markdown('<div class="panel"><div class="panel-title">▸ Lab Catalog</div>',
+            unsafe_allow_html=True)
+
+tab_names = list(LAB_CATALOG.keys())
+tabs = st.tabs(tab_names)
+for tab, group in zip(tabs, tab_names):
+    with tab:
+        for lab in LAB_CATALOG[group]:
+            tag_cls = f"tag-{lab['tag']}"
+            col_a, col_b = st.columns([5, 1])
+            with col_a:
+                st.markdown(
+                    f'<div class="lab-card"><span class="id">LAB #{lab["id"]:03d}</span> '
+                    f'<span class="ttl">{lab["title"]}</span> '
+                    f'<span class="{tag_cls}">{lab["tag"].upper()}</span><br>'
+                    f'<span style="color:#8ab4d8;font-size:12px">{lab["obj"]}</span></div>',
+                    unsafe_allow_html=True)
+            with col_b:
+                if st.button("Start", key=f"start_{lab['id']}"):
+                    st.session_state.current_lab = lab
+                    st.session_state.chat = []
+                    st.rerun()
+st.markdown('</div>', unsafe_allow_html=True)
+
+# =============================================================================
+# SYSTEM PROMPT BUILDER
+# =============================================================================
+def system_prompt():
+    lab = st.session_state.current_lab
+    env = (f"Rack={st.session_state.rack}, Cells={CELLS}, Compute={COMPUTE}, "
+           f"IB_Switches={IB}, DGs={st.session_state.dg}, "
+           f"Role={st.session_state.role}, Level={st.session_state.level}")
+    lab_block = ""
+    if lab:
+        lab_block = (
+            f"CURRENT LAB #{lab['id']}: {lab['title']} [{lab['tag'].upper()}]\n"
+            f"Objective: {lab['obj']}\n"
+            f"Scenario: {lab['scenario']}\n"
+            f"Tasks: {' | '.join(lab['tasks'])}\n"
+            f"Validation: {lab['validation']}\n"
         )
-        for grp_name, labs in lvl_data["groups"].items():
-            done_in_grp = sum(
-                1 for lab in labs
-                if any(task_key(lab["id"], i) in st.session_state.tasks_done
-                       for i in range(len(lab["tasks"])))
-            )
-            with st.expander(f"{grp_name} ({done_in_grp}/{len(labs)})", expanded=False):
-                for lab in labs:
-                    dt, tt = get_lab_progress(lab["id"], lab["tasks"])
-                    is_active = (
-                        st.session_state.current_lab_id == lab["id"]
-                        and st.session_state.current_level == lvl_key
-                    )
-                    chk   = "✅" if dt == tt else ("▶" if is_active else "○")
-                    btype = "primary" if is_active else "secondary"
-                    if st.button(
-                        f"{chk} #{lab['id']} {lab['title']}",
-                        key=f"lb_{lvl_key}_{lab['id']}",
-                        use_container_width=True,
-                        type=btype,
-                    ):
-                        st.session_state.current_level   = lvl_key
-                        st.session_state.current_group   = grp_name
-                        st.session_state.current_lab_id  = lab["id"]
-                        st.session_state.labs_completed += 1
-                        start_lab(lab)
-                        st.rerun()
+    return f"""You are ExaSimBot — Oracle Exadata X8M DBA/DMA Hands-On Lab Trainer.
+Senior Exadata DBA with 15+ years experience. Direct, practical, technical.
 
+ENVIRONMENT: {env}
+{lab_block}
+RULES:
+1. Commands ALWAYS in triple-backtick code blocks with correct prompt prefix
+   (CellCLI>, SQL>, DGMGRL>, $, #).
+2. Show realistic simulated Exadata output after every command.
+3. LAB tag: demo first, then "YOUR TURN" exercise for the practice terminal.
+4. QUIZ tag: ask 3 MCQ questions A/B/C/D, score CORRECT ✓ / WRONG ✗.
+5. Depth: Basic=concepts, Intermediate=full procedure, Advanced=internals.
+6. DBA = SQL/ASM/RMAN/srvctl/crsctl/DGMGRL. DMA = hardware/firmware/ILOM/patchmgr.
+7. L4 incident labs: present symptoms first, ask the user to diagnose.
+8. Max 500 words per response.
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MAIN LAB UI — full width
-# ─────────────────────────────────────────────────────────────────────────────
-current_lab = get_current_lab()
-lvl_key     = st.session_state.current_level
-lvl_data    = LAB_CATALOG[lvl_key]
-tasks       = current_lab["tasks"]
-done_tasks, total_tasks = get_lab_progress(current_lab["id"], tasks)
-prog_pct = int(done_tasks / total_tasks * 100) if total_tasks else 0
-lc = LEVEL_COLORS[lvl_key]
+X8M SPECS: {X8M_SPECS_TEXT}
+"""
 
-# Rack visualizer
-st.markdown(build_rack_html(), unsafe_allow_html=True)
+# =============================================================================
+# CHAT INTERFACE
+# =============================================================================
+st.markdown('<div class="panel"><div class="panel-title">▸ ExaSimBot — AI Trainer</div>',
+            unsafe_allow_html=True)
 
-# Lab header
-hc1, hc2, hc3 = st.columns([3, 1.8, 0.8])
-with hc1:
-    st.markdown(
-        f"<span style='color:{lc};font-size:11px;font-weight:700'>"
-        f"{LEVEL_ICONS[lvl_key]} {lvl_data['label']}</span>"
-        f" <span style='color:#4a7ab5;font-size:11px'>› {st.session_state.current_group}</span>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(f"#### #{current_lab['id']} — {current_lab['title']}")
-with hc2:
-    st.markdown(
-        f'<div class="obj-box"><b>Scenario:</b> {current_lab["scenario"]}</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div class="val-box">✓ {current_lab["validation"]}</div>',
-        unsafe_allow_html=True,
-    )
-with hc3:
-    tag_color = {"demo": "#5da8e8", "lab": "#5dc888", "quiz": "#e74c3c"}.get(current_lab["tag"], "#8aadcc")
-    st.markdown(
-        f"<div style='text-align:right;font-size:11px;color:#8aadcc;margin-top:4px'>"
-        f"Tasks {done_tasks}/{total_tasks} ({prog_pct}%)</div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div class="prog-wrap"><div class="prog-bar" style="width:{prog_pct}%"></div></div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"<span style='color:{tag_color};font-size:11px;font-weight:700'>"
-        f"{TAG_LABEL.get(current_lab['tag'], '')}</span>",
-        unsafe_allow_html=True,
-    )
+if st.session_state.current_lab:
+    lab = st.session_state.current_lab
+    st.markdown(f"**Active Lab:** #{lab['id']} — {lab['title']} "
+                f"({lab['tag'].upper()})")
+else:
+    st.info("Select a lab above, or ask ExaSimBot anything about Exadata.")
 
-# Three columns: Tasks | Chat | Quick Actions
-col_t, col_c, col_qa = st.columns([1.1, 3.8, 1.1])
+# Show history
+for msg in st.session_state.chat:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-# ── TASK LIST ────────────────────────────────────────────────────────────────
-with col_t:
-    st.markdown("**Lab Tasks**")
-    for i, task in enumerate(tasks):
-        is_done = task_key(current_lab["id"], i) in st.session_state.tasks_done
-        icon    = "✅" if is_done else f"{i + 1}."
-        if st.button(f"{icon} {task}", key=f"t_{i}", use_container_width=True):
-            mark_task_done(current_lab["id"], i)
-            call_api(
-                f"[TASK {i+1}: {task}] Lab #{current_lab['id']}: {current_lab['title']} | {env_ctx()}\n\n"
-                f"Demo this task with real Exadata commands and realistic output. "
-                f"Then give a YOUR TURN exercise.",
-                show_user=False,
-            )
-            st.rerun()
+user_input = st.chat_input("Ask ExaSimBot or type a command...")
 
-    st.markdown("---")
-    st.markdown(
-        f'<div style="font-size:10px;color:#8aadcc;line-height:1.5">{current_lab["obj"]}</div>',
-        unsafe_allow_html=True,
-    )
-
-# ── CHAT + PRACTICE TERMINAL ─────────────────────────────────────────────────
-with col_c:
-    st.markdown("**Lab Terminal & Chat**")
-
-    if not st.session_state.messages:
-        st.markdown(
-            f'<div class="chat-sys">Lab #{current_lab["id"]} ready — '
-            f'click a task on the left or use Quick Actions on the right to begin.</div>',
-            unsafe_allow_html=True,
-        )
+if user_input:
+    if not st.session_state.openai_key:
+        st.error("⚠ Enter your OpenAI API key in the top config bar.")
     else:
-        for msg in st.session_state.messages:
-            if msg["role"] == "user" and not msg["content"].startswith("["):
-                st.markdown(f'<div class="chat-user">👤 {msg["content"]}</div>', unsafe_allow_html=True)
-            elif msg["role"] == "assistant":
-                st.markdown(f'<div class="chat-bot">{msg["content"]}</div>', unsafe_allow_html=True)
+        st.session_state.chat.append({"role": "user", "content": user_input})
+        with st.chat_message("user"):
+            st.markdown(user_input)
 
-    st.markdown("---")
+        try:
+            client = OpenAI(api_key=st.session_state.openai_key)
+            messages = [{"role": "system", "content": system_prompt()}]
+            messages.extend(st.session_state.chat[-18:])
 
-    # Auto-detect terminal prompt based on current group
-    grp_lower = st.session_state.current_group.lower()
-    if any(x in grp_lower for x in ["exadata", "iorm", "flash", "cell"]):
-        sym = "CellCLI>"
-    elif "data guard" in grp_lower:
-        sym = "DGMGRL>"
-    elif any(x in grp_lower for x in ["rac", "ha", "patch", "auto", "incident", "dr", "disaster"]):
-        sym = "$"
+            with st.chat_message("assistant"):
+                placeholder = st.empty()
+                full = ""
+                stream = client.chat.completions.create(
+                    model=st.session_state.openai_model,
+                    messages=messages,
+                    max_tokens=1500,
+                    temperature=0.4,
+                    stream=True,
+                )
+                for chunk in stream:
+                    delta = chunk.choices[0].delta.content or ""
+                    full += delta
+                    placeholder.markdown(full + "▌")
+                placeholder.markdown(full)
+            st.session_state.chat.append({"role": "assistant", "content": full})
+        except Exception as e:
+            st.error(f"OpenAI error: {e}")
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+# =============================================================================
+# PRACTICE TERMINAL
+# =============================================================================
+st.markdown('<div class="panel"><div class="panel-title">▸ Practice Terminal</div>',
+            unsafe_allow_html=True)
+
+# Dynamic prompt
+def get_prompt_sym():
+    if not st.session_state.current_lab:
+        return "$"
+    title = st.session_state.current_lab["title"].lower()
+    if "cell" in title or "griddisk" in title or "flash" in title:
+        return "CellCLI>"
+    if "data guard" in title or "switchover" in title or "standby" in title:
+        return "DGMGRL>"
+    if "pdb" in title or "smart scan" in title or "diskgroup" in title or "rman" in title:
+        return "SQL>"
+    return "$"
+
+sym = get_prompt_sym()
+
+# Render terminal history
+term_html = '<div class="terminal">'
+term_html += '<div style="color:#f39c12">[ExaSimBot Practice Terminal — type commands below]</div>'
+for entry in st.session_state.term_history[-20:]:
+    term_html += f'<div><span class="prompt">{entry["p"]}</span> <span class="cmd">{entry["c"]}</span></div>'
+    if entry.get("out"):
+        term_html += f'<div class="ai">{entry["out"]}</div>'
+term_html += f'<div><span class="prompt">{sym}</span> <span style="color:#f39c12">_</span></div>'
+term_html += '</div>'
+st.markdown(term_html, unsafe_allow_html=True)
+
+col_t1, col_t2 = st.columns([5, 1])
+with col_t1:
+    cmd = st.text_input("Command", key="pt_cmd",
+                        placeholder=f"{sym} enter a command and press Evaluate",
+                        label_visibility="collapsed")
+with col_t2:
+    evaluate = st.button("Evaluate", use_container_width=True)
+
+if evaluate and cmd:
+    if not st.session_state.openai_key:
+        st.error("⚠ Enter your OpenAI API key.")
+    elif not st.session_state.current_lab:
+        st.warning("Select a lab first.")
     else:
-        sym = "SQL>"
-
-    st.markdown(
-        f'<div class="term-hdr">⬡ Practice Terminal &nbsp;|&nbsp; '
-        f'<b style="color:#5dc888">{sym}</b></div>',
-        unsafe_allow_html=True,
-    )
-
-    pt1, pt2 = st.columns([5, 1])
-    with pt1:
-        cmd = st.text_input(
-            "cmd_in", key="pt_cmd",
-            placeholder=f"{sym} type your command here...",
-            label_visibility="collapsed",
-        )
-    with pt2:
-        run_btn = st.button("▶ Run", type="primary", use_container_width=True)
-
-    if run_btn and cmd:
-        st.markdown(f'<div class="term-hdr">{sym} {cmd}</div>', unsafe_allow_html=True)
-        call_api(
-            f"[PRACTICE TERMINAL] Typed: `{cmd}`\n"
-            f"Lab #{current_lab['id']}: {current_lab['title']} | {env_ctx()}\n\n"
-            f"In max 120 words: Is this correct for this lab context? "
-            f"Show the real Exadata output. Say CORRECT (+10 pts) or WRONG with the right command.",
-            show_user=False,
-        )
-        st.rerun()
-
-    if st.button("💡 Hint", use_container_width=False):
-        call_api(
-            f"Give a 1-2 sentence hint (no full answer) for Lab #{current_lab['id']}: "
-            f"{current_lab['title']}. Point in the right direction only.",
-            show_user=False,
-        )
-        st.rerun()
-
-    user_q = st.chat_input("Ask anything about this lab, type your quiz answer, or request more detail...")
-    if user_q:
-        call_api(user_q)
-        st.rerun()
-
-# ── QUICK ACTIONS ─────────────────────────────────────────────────────────────
-with col_qa:
-    st.markdown("**Quick Actions**")
-
-    if st.button("▶ Start Lab", use_container_width=True, type="primary"):
-        start_lab(current_lab)
-        st.rerun()
-    if st.button("▶ Demo Task 1", use_container_width=True):
-        quick_send(f"Demo Task 1: {tasks[0]} with full Exadata commands and realistic output.")
-    if st.button("⌨ Practice", use_container_width=True):
-        quick_send("Show the exact command for the current task, then give me a YOUR TURN exercise.")
-    if st.button("? Quiz Me", use_container_width=True):
-        quick_send("Quiz me on this lab topic with 3 MCQ questions and score my answers.")
-    if st.button("📖 Theory", use_container_width=True):
-        quick_send("Explain the theory and concepts behind this lab topic.")
-    if st.button("⚠ Errors", use_container_width=True):
-        quick_send("Show common errors and how to troubleshoot them for this lab topic.")
-    if st.button("✅ Validate", use_container_width=True):
-        quick_send(f"Show me how to validate completion of this lab. Criteria: {current_lab['validation']}")
-    if st.button("→ Next Lab", use_container_width=True):
-        all_labs = []
-        for lk, ld in LAB_CATALOG.items():
-            for gn, lbs in ld["groups"].items():
-                for lb in lbs:
-                    all_labs.append((lb["id"], lb, lk, gn))
-        cur_idx = next((i for i, (lid, _, _, _) in enumerate(all_labs) if lid == current_lab["id"]), 0)
-        if cur_idx < len(all_labs) - 1:
-            nid, nlab, nlvl, ngrp = all_labs[cur_idx + 1]
-            st.session_state.current_level   = nlvl
-            st.session_state.current_group   = ngrp
-            st.session_state.current_lab_id  = nid
-            st.session_state.labs_completed += 1
-            start_lab(nlab)
+        try:
+            client = OpenAI(api_key=st.session_state.openai_key)
+            lab = st.session_state.current_lab
+            eval_prompt = (
+                f"[PRACTICE TERMINAL] User typed: `{cmd}`\n"
+                f"Lab #{lab['id']}: {lab['title']}\n"
+                f"Objective: {lab['obj']}\n\n"
+                f"In max 120 words: Is this correct for this lab context? "
+                f"Show the realistic Exadata output. "
+                f"End with CORRECT (+10 pts) or WRONG and show the right command."
+            )
+            resp = client.chat.completions.create(
+                model=st.session_state.openai_model,
+                messages=[
+                    {"role": "system", "content": system_prompt()},
+                    {"role": "user", "content": eval_prompt},
+                ],
+                max_tokens=500,
+                temperature=0.3,
+            )
+            output = resp.choices[0].message.content
+            st.session_state.term_history.append({"p": sym, "c": cmd, "out": output})
             st.rerun()
+        except Exception as e:
+            st.error(f"Error: {e}")
 
-    st.markdown("---")
-    st.markdown(
-        f"<div style='font-size:10px;color:#4a7ab5'>#{current_lab['id']} · "
-        f"<span style='color:{lc}'>{LEVEL_ICONS[lvl_key]} {lvl_key}</span></div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"<div style='font-size:11px;color:#c8dff0;margin-top:2px'>{current_lab['title']}</div>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("---")
-    st.markdown("<div style='font-size:10px;color:#4a7ab5'>LEVELS</div>", unsafe_allow_html=True)
-    for lk2, lc3 in LEVEL_COLORS.items():
-        n_labs = sum(len(v) for v in LAB_CATALOG[lk2]["groups"].values())
-        st.markdown(
-            f"<span style='color:{lc3};font-size:10px'>{LEVEL_ICONS[lk2]} {lk2} — {n_labs} labs</span>",
-            unsafe_allow_html=True,
-        )
+st.markdown('</div>', unsafe_allow_html=True)
+
+# =============================================================================
+# FOOTER
+# =============================================================================
+st.markdown("""
+<div style="text-align:center;color:#6a8faa;font-size:11px;
+            letter-spacing:2px;margin-top:20px;padding:12px;
+            border-top:1px solid #1a2c47;">
+EXADATA X8M SIMULATOR v2.0 • BUILT WITH STREAMLIT + OPENAI GPT-4o<br>
+PRASHANT | ORACLE ACE (APPRENTICE) | PRASHANTORACLEDBA.WORDPRESS.COM
+</div>
+""", unsafe_allow_html=True)
