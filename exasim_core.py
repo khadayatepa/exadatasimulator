@@ -460,6 +460,9 @@ DEFAULTS = {
     "pg_result": {},      # {ex_id: {verdict, feedback, simulated_output, pts, correct_cmd}}
     "pg_hints_shown": {}, # {ex_id: 0|1|2}
     "pg_free_hist": [],   # free-practice terminal history
+    # API key validation
+    "api_key_valid": False,
+    "api_key_error": "",
 }
 
 def init_state():

@@ -68,6 +68,42 @@ def view_home():
             "Level", ["Basic", "Intermediate", "Advanced"],
             index=["Basic","Intermediate","Advanced"].index(st.session_state.level))
 
+    # ── API Key validation row ────────────────────────────────────────────────
+    if st.session_state.openai_key:
+        vb_col, vs_col = st.columns([1.8, 8.2])
+        with vb_col:
+            if st.button("▶ Validate & Enter Lab", key="validate_key_btn",
+                         use_container_width=True):
+                try:
+                    from openai import OpenAI as _OAI
+                    _OAI(api_key=st.session_state.openai_key).models.list()
+                    st.session_state.api_key_valid = True
+                    st.session_state.api_key_error = ""
+                except Exception as e:
+                    st.session_state.api_key_valid = False
+                    st.session_state.api_key_error = str(e)[:100]
+        with vs_col:
+            if st.session_state.api_key_valid:
+                st.markdown(
+                    '<div style="background:#0a1a0a;border:1px solid #00ff8844;'
+                    'border-radius:6px;padding:8px 16px;margin-top:4px;'
+                    'color:#00ff88;font-family:\'Share Tech Mono\',monospace;font-size:13px;">'
+                    '✓ &nbsp;API Key valid — Proceed to Lab</div>',
+                    unsafe_allow_html=True)
+            elif st.session_state.api_key_error:
+                st.markdown(
+                    f'<div style="background:#1a0a0a;border:1px solid #e74c3c44;'
+                    f'border-radius:6px;padding:8px 16px;margin-top:4px;'
+                    f'color:#e74c3c;font-family:\'Share Tech Mono\',monospace;font-size:13px;">'
+                    f'✗ &nbsp;Invalid key — {st.session_state.api_key_error}</div>',
+                    unsafe_allow_html=True)
+    else:
+        st.markdown(
+            '<div style="color:#6a8faa;font-size:12px;padding:6px 2px;'
+            'font-family:\'Share Tech Mono\',monospace;letter-spacing:1px;">'
+            '↑ Enter your OpenAI API key above then click Validate to proceed</div>',
+            unsafe_allow_html=True)
+
     specs = RACK_SPECS[st.session_state.rack]
     COMPUTE, CELLS, IB = specs["compute"], specs["cells"], specs["ib"]
 
