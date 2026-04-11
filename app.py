@@ -101,6 +101,20 @@ def view_home():
         </div>
         ''', unsafe_allow_html=True)
 
+    # Playground launch
+    st.markdown('<div class="section-header">DBA Playground</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div style="color:#8ab4d8;font-size:14px;margin-bottom:10px;">'
+        '50 hands-on command exercises across 8 categories (Basic → Advanced). '
+        'Type real Exadata commands, get AI-evaluated feedback, and track your score.</div>',
+        unsafe_allow_html=True,
+    )
+    pg_col, _ = st.columns([2, 8])
+    with pg_col:
+        if st.button("⌨ Launch Playground — 50 Exercises", use_container_width=True,
+                     key="btn_playground"):
+            st.switch_page("pages/2_Playground.py")
+
     # Curriculum overview
     st.markdown('<div class="section-header">Curriculum — Utility-Focused Path</div>',
                 unsafe_allow_html=True)

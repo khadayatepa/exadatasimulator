@@ -450,8 +450,16 @@ DEFAULTS = {
     "role": "DBA",
     "level": "Intermediate",
     "active_lesson_id": None,
-    "chat": {},          # {lesson_id: [msgs]}
-    "quiz_state": {},    # {lesson_id: {score, q#}}
+    "chat": {},           # {lesson_id: [msgs]}
+    "quiz_state": {},     # {lesson_id: {score, answered}}
+    # Playground state
+    "pg_scores": {},      # {category: {correct:0, partial:0, wrong:0, pts:0}}
+    "pg_total_pts": 0,
+    "pg_history": [],     # [{id, cmd, verdict, pts, ts}]
+    "pg_ex_id": None,     # currently selected exercise id
+    "pg_result": {},      # {ex_id: {verdict, feedback, simulated_output, pts, correct_cmd}}
+    "pg_hints_shown": {}, # {ex_id: 0|1|2}
+    "pg_free_hist": [],   # free-practice terminal history
 }
 
 def init_state():
