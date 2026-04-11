@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Exadata X8M Simulator — Project Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: radial-gradient(ellipse at top, #081424 0%, #04080f 100%);
+    color: #c8dff8;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Layout ── */
+  .page { max-width: 1100px; margin: 0 auto; padding: 30px 24px 60px; }
+
+  /* ── Header ── */
+  .hero {
+    border-bottom: 1px solid #1a2c47;
+    padding-bottom: 20px;
+    margin-bottom: 36px;
+  }
+  .hero-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px; font-weight: 700; letter-spacing: 3px;
+    background: linear-gradient(90deg, #e74c3c, #f39c12);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .hero-sub {
+    color: #6a8faa; font-size: 13px; letter-spacing: 2px;
+  }
+  .badge {
+    display: inline-block; background: #0f1a2e; border: 1px solid #1a2c47;
+    padding: 4px 14px; border-radius: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px; color: #00ff88; margin: 8px 6px 0 0;
+  }
+
+  /* ── Section headers ── */
+  h2 {
+    font-family: 'Orbitron', sans-serif;
+    color: #f39c12; font-size: 14px; letter-spacing: 2px;
+    text-transform: uppercase;
+    border-bottom: 1px solid #1a2c47;
+    padding-bottom: 8px; margin: 40px 0 18px;
+  }
+  h2::before { content: '▸ '; color: #c0392b; }
+
+  h3 {
+    font-family: 'Rajdhani', sans-serif;
+    color: #66c2ff; font-size: 16px; font-weight: 700;
+    letter-spacing: 1px; margin: 20px 0 8px;
+  }
+
+  /* ── Cards ── */
+  .card {
+    background: #0a1220; border: 1px solid #1a2c47;
+    border-radius: 10px; padding: 20px; margin-bottom: 16px;
+  }
+  .card-red   { border-left: 4px solid #e74c3c; }
+  .card-blue  { border-left: 4px solid #0088ff; }
+  .card-green { border-left: 4px solid #00ff88; }
+  .card-gold  { border-left: 4px solid #f39c12; }
+  .card-purple{ border-left: 4px solid #8844ff; }
+  .card-teal  { border-left: 4px solid #00ced1; }
+
+  .card-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px; letter-spacing: 1.5px; margin-bottom: 10px;
+  }
+  .card-red    .card-title { color: #e74c3c; }
+  .card-blue   .card-title { color: #66c2ff; }
+  .card-green  .card-title { color: #00ff88; }
+  .card-gold   .card-title { color: #f39c12; }
+  .card-purple .card-title { color: #c8a0ff; }
+  .card-teal   .card-title { color: #00ced1; }
+
+  /* ── File table ── */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  th {
+    background: #0f1a2e; color: #f39c12;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px; letter-spacing: 1.5px;
+    padding: 10px 14px; text-align: left;
+    border-bottom: 1px solid #1a2c47;
+  }
+  td {
+    padding: 10px 14px; border-bottom: 1px solid #0d1e35;
+    vertical-align: top; font-size: 14px;
+  }
+  tr:hover td { background: #0d1e35; }
+  .fname {
+    font-family: 'Share Tech Mono', monospace;
+    color: #00ff88; font-size: 13px; white-space: nowrap;
+  }
+  .ftype {
+    display: inline-block; padding: 2px 10px; border-radius: 8px;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    white-space: nowrap;
+  }
+  .ft-core { background: #e74c3c22; color: #e74c3c; }
+  .ft-page { background: #0088ff22; color: #66c2ff; }
+  .ft-data { background: #00ff8822; color: #00ff88; }
+  .ft-conf { background: #f39c1222; color: #f39c12; }
+
+  /* ── Code blocks ── */
+  pre {
+    background: #030a14; border: 1px solid #1a4a2a;
+    border-radius: 6px; padding: 16px 18px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px; color: #00ff88;
+    overflow-x: auto; line-height: 1.7;
+    margin: 10px 0;
+  }
+  .comment { color: #4a8a6a; }
+  .cmd     { color: #f39c12; }
+  .arg     { color: #66c2ff; }
+  .str     { color: #c8a0ff; }
+  .ok      { color: #00ff88; }
+  .warn    { color: #e74c3c; }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 0; margin: 16px 0;
+  }
+  .flow-box {
+    background: #0f1a2e; border: 1px solid #1a2c47;
+    border-radius: 8px; padding: 12px 18px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px; text-align: center; min-width: 130px;
+  }
+  .flow-box .fb-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+  .flow-box .fb-label { color: #c8dff8; letter-spacing: 1px; }
+  .flow-box .fb-sub { color: #6a8faa; font-size: 10px; margin-top: 2px; }
+  .flow-arrow {
+    color: #f39c12; font-size: 22px; padding: 0 8px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  /* ── Step list ── */
+  .steps { counter-reset: step; list-style: none; padding: 0; }
+  .steps li {
+    counter-increment: step;
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 12px 0; border-bottom: 1px solid #0d1e35;
+  }
+  .steps li::before {
+    content: counter(step);
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+    color: white; font-family: 'Orbitron', sans-serif;
+    font-size: 11px; font-weight: 700;
+    min-width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .steps li .step-text { flex: 1; }
+  .steps li .step-title { color: #c8dff8; font-weight: 700; }
+  .steps li .step-desc  { color: #8ab4d8; font-size: 14px; }
+
+  /* ── Pill ── */
+  .pill {
+    display: inline-block; padding: 3px 12px; border-radius: 12px;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    margin: 2px 3px;
+  }
+  .pill-red    { background: #e74c3c22; color: #e74c3c; border: 1px solid #e74c3c44; }
+  .pill-blue   { background: #0088ff22; color: #66c2ff; border: 1px solid #0088ff44; }
+  .pill-green  { background: #00ff8822; color: #00ff88; border: 1px solid #00ff8844; }
+  .pill-gold   { background: #f39c1222; color: #f39c12; border: 1px solid #f39c1244; }
+  .pill-purple { background: #8844ff22; color: #c8a0ff; border: 1px solid #8844ff44; }
+
+  /* ── Warn box ── */
+  .warn-box {
+    background: #1a0a0a; border-left: 3px solid #e74c3c;
+    padding: 12px 16px; border-radius: 4px;
+    color: #f0a0a0; font-size: 14px; margin: 12px 0;
+  }
+  .info-box {
+    background: #0a1a0a; border-left: 3px solid #00ff88;
+    padding: 12px 16px; border-radius: 4px;
+    color: #a0d0a0; font-size: 14px; margin: 12px 0;
+  }
+
+  /* ── Grid ── */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) {
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    .flow { flex-direction: column; }
+  }
+
+  /* ── TOC ── */
+  .toc { background: #0a1220; border: 1px solid #1a2c47; border-radius: 10px; padding: 20px; margin-bottom: 36px; }
+  .toc-title { font-family: 'Orbitron', sans-serif; color: #f39c12; font-size: 12px; letter-spacing: 2px; margin-bottom: 12px; }
+  .toc a { color: #66c2ff; text-decoration: none; font-size: 14px; display: block; padding: 3px 0; }
+  .toc a:hover { color: #f39c12; }
+  .toc-num { color: #f39c12; font-family: 'Share Tech Mono', monospace; font-size: 11px; margin-right: 8px; }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center; color: #6a8faa; font-size: 11px;
+    letter-spacing: 2px; margin-top: 60px;
+    padding: 16px; border-top: 1px solid #1a2c47;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ═══════════════════════════════════ HERO ═══════════════════════════════════ -->
+  <div class="hero">
+    <div class="hero-title">▸ EXADATA X8M SIMULATOR — PROJECT GUIDE</div>
+    <div class="hero-sub">END-TO-END REFERENCE • FILES • GIT WORKFLOW • DEPLOYMENT • ARCHITECTURE</div>
+    <div style="margin-top:12px;">
+      <span class="badge">● Python 3</span>
+      <span class="badge">● Streamlit</span>
+      <span class="badge">● OpenAI GPT-4o</span>
+      <span class="badge">● GitHub</span>
+      <span class="badge">● Streamlit Cloud</span>
+      <span class="badge">● Oracle Exadata X8M</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ TOC ════════════════════════════════════ -->
+  <div class="toc">
+    <div class="toc-title">TABLE OF CONTENTS</div>
+    <a href="#overview"><span class="toc-num">01</span> Project Overview</a>
+    <a href="#files"><span class="toc-num">02</span> File Structure — What Each File Does</a>
+    <a href="#architecture"><span class="toc-num">03</span> App Architecture & Data Flow</a>
+    <a href="#curriculum"><span class="toc-num">04</span> Curriculum Structure (Modules & Lessons)</a>
+    <a href="#playground"><span class="toc-num">05</span> DBA Playground — 50 Exercises</a>
+    <a href="#git-pull"><span class="toc-num">06</span> Git — Pull (Get Latest Code)</a>
+    <a href="#git-push"><span class="toc-num">07</span> Git — Commit & Push (Save Changes)</a>
+    <a href="#git-reference"><span class="toc-num">08</span> Git Quick Reference Card</a>
+    <a href="#deploy"><span class="toc-num">09</span> Streamlit Cloud Deployment</a>
+    <a href="#run-local"><span class="toc-num">10</span> Running Locally</a>
+    <a href="#env"><span class="toc-num">11</span> Environment & Secrets</a>
+    <a href="#troubleshoot"><span class="toc-num">12</span> Troubleshooting</a>
+  </div>
+
+  <!-- ═══════════════════════════════════ 01 OVERVIEW ═══════════════════════════ -->
+  <h2 id="overview">01 — Project Overview</h2>
+  <div class="card card-red">
+    <div class="card-title">WHAT IS THIS APP?</div>
+    <p>An interactive <strong style="color:#f39c12">Oracle Exadata X8M Lab Simulator</strong> built with Streamlit and OpenAI.
+    It provides a structured DBA/DMA curriculum, AI-powered lesson walkthroughs, and a hands-on command playground — all in a browser, no real Exadata hardware needed.</p>
+  </div>
+  <div class="grid3">
+    <div class="card card-blue">
+      <div class="card-title">CURRICULUM</div>
+      <p style="font-size:14px;color:#8ab4d8;">9 modules (M0–M8), 20+ lessons covering CellCLI, DCLI, ASM, RMAN, SRVCTL, Data Guard, Smart Scan, Incident Response.</p>
+    </div>
+    <div class="card card-green">
+      <div class="card-title">AI TRAINER</div>
+      <p style="font-size:14px;color:#8ab4d8;">ExaSimBot (OpenAI GPT-4o) simulates demos, evaluates practice commands, runs scenarios and quizzes.</p>
+    </div>
+    <div class="card card-gold">
+      <div class="card-title">PLAYGROUND</div>
+      <p style="font-size:14px;color:#8ab4d8;">50 hands-on exercises across 8 categories. Type real commands, get AI feedback, track score per category.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ 02 FILES ══════════════════════════════ -->
+  <h2 id="files">02 — File Structure</h2>
+
+  <pre><span class="comment"># Repository: github.com/khadayatepa/exadatasimulator</span>
+exadatasimulator/
+├── <span class="ok">app.py</span>                  <span class="comment"># ← Main entry point (Streamlit runs this)</span>
+├── <span class="ok">exasim_core.py</span>          <span class="comment"># ← Shared data + helpers (imported everywhere)</span>
+├── <span class="ok">playground_data.py</span>      <span class="comment"># ← 50 exercise definitions</span>
+├── <span class="ok">requirements.txt</span>        <span class="comment"># ← Python dependencies</span>
+├── <span class="ok">config.toml</span>             <span class="comment"># ← Streamlit theme + server settings</span>
+└── pages/
+    ├── <span class="ok">1_Lesson.py</span>         <span class="comment"># ← Dedicated lesson workspace page</span>
+    └── <span class="ok">2_Playground.py</span>     <span class="comment"># ← DBA Playground page (50 exercises)</span></pre>
+
+  <table>
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Type</th>
+        <th>Purpose</th>
+        <th>Key Contents</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="fname">app.py</span></td>
+        <td><span class="ftype ft-core">CORE</span></td>
+        <td>Streamlit entry point. Internal router for Home and Lesson views.</td>
+        <td><code>view_home()</code> — rack diagram, config bar, curriculum cards, playground button, lesson catalog<br>
+            <code>view_lesson()</code> — 8-tab lesson workspace (Why/How/Syntax/Demo/Practice/Scenario/Quiz/Chat)<br>
+            Router at bottom: <code>st.session_state.view</code></td>
+      </tr>
+      <tr>
+        <td><span class="fname">exasim_core.py</span></td>
+        <td><span class="ftype ft-core">CORE</span></td>
+        <td>Central data store and shared helpers. Imported by all pages.</td>
+        <td><code>RACK_SPECS</code> — Eighth/Quarter/Half/Full rack hardware specs<br>
+            <code>CURRICULUM</code> — M0–M8 module + lesson definitions (why/how/syntax/demo/practice/scenario/quiz)<br>
+            <code>GLOBAL_CSS</code> — full app stylesheet (Orbitron + Rajdhani + dark theme)<br>
+            <code>DEFAULTS</code> + <code>init_state()</code> — session state initialisation<br>
+            <code>build_diagram()</code> — animated SVG rack topology<br>
+            <code>system_prompt()</code> — OpenAI system prompt builder<br>
+            <code>get_client()</code> / <code>stream_response()</code> — OpenAI call helpers</td>
+      </tr>
+      <tr>
+        <td><span class="fname">playground_data.py</span></td>
+        <td><span class="ftype ft-data">DATA</span></td>
+        <td>50 exercise definitions for the DBA Playground.</td>
+        <td><code>PLAYGROUND_EXERCISES</code> — list of 50 dicts (id, category, level, title, scenario, task, hints, context, ref_command, explanation, tags)<br>
+            <code>CATEGORIES</code> — 8 category metadata (icon, color, desc)<br>
+            <code>LEVELS</code> — [Basic, Intermediate, Advanced]</td>
+      </tr>
+      <tr>
+        <td><span class="fname">pages/1_Lesson.py</span></td>
+        <td><span class="ftype ft-page">PAGE</span></td>
+        <td>Standalone lesson workspace (Streamlit multi-page mode).</td>
+        <td>Reads <code>active_lesson_id</code> from session state. Same 8-tab layout as app.py's lesson view. Back button uses <code>st.switch_page("app.py")</code>.</td>
+      </tr>
+      <tr>
+        <td><span class="fname">pages/2_Playground.py</span></td>
+        <td><span class="ftype ft-page">PAGE</span></td>
+        <td>DBA Playground — 50 exercise browser + terminal + scoring.</td>
+        <td>Filter bar (category/level/search), exercise grid (4-per-row cards), terminal emulator, AI evaluation, hint system, category scoreboard, recent attempts log.</td>
+      </tr>
+      <tr>
+        <td><span class="fname">requirements.txt</span></td>
+        <td><span class="ftype ft-conf">CONFIG</span></td>
+        <td>Python package dependencies.</td>
+        <td><code>streamlit&gt;=1.35.0</code><br><code>openai&gt;=1.30.0</code></td>
+      </tr>
+      <tr>
+        <td><span class="fname">config.toml</span></td>
+        <td><span class="ftype ft-conf">CONFIG</span></td>
+        <td>Streamlit theme and server configuration.</td>
+        <td>Primary color <code>#e74c3c</code>, dark background <code>#0a1628</code>, monospace font, headless mode, CORS disabled.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════ 03 ARCHITECTURE ══════════════════════ -->
+  <h2 id="architecture">03 — App Architecture & Data Flow</h2>
+
+  <div class="flow">
+    <div class="flow-box">
+      <span class="fb-icon">🌐</span>
+      <span class="fb-label">BROWSER</span>
+      <span class="fb-sub">User</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <span class="fb-icon">☁️</span>
+      <span class="fb-label">STREAMLIT CLOUD</span>
+      <span class="fb-sub">streamlit.app</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <span class="fb-icon">🔴</span>
+      <span class="fb-label">app.py</span>
+      <span class="fb-sub">Entry point</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <span class="fb-icon">⚙️</span>
+      <span class="fb-label">exasim_core.py</span>
+      <span class="fb-sub">Data + Helpers</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <span class="fb-icon">🤖</span>
+      <span class="fb-label">OpenAI API</span>
+      <span class="fb-sub">GPT-4o</span>
+    </div>
+  </div>
+
+  <div class="card card-blue" style="margin-top:16px;">
+    <div class="card-title">INTERNAL ROUTING (app.py)</div>
+    <pre><span class="comment"># app.py manages two views via session state — no page reload needed</span>
+st.session_state.view = <span class="str">"home"</span>    <span class="comment"># → view_home()  — rack topology + curriculum</span>
+st.session_state.view = <span class="str">"lesson"</span>  <span class="comment"># → view_lesson() — 8-tab lesson workspace</span>
+
+<span class="comment"># Navigate to Playground (separate Streamlit page)</span>
+st.switch_page(<span class="str">"pages/2_Playground.py"</span>)
+
+<span class="comment"># Navigate to Lesson page (alternative standalone page)</span>
+st.switch_page(<span class="str">"pages/1_Lesson.py"</span>)</pre>
+  </div>
+
+  <div class="card card-green">
+    <div class="card-title">SESSION STATE — SHARED ACROSS ALL PAGES</div>
+    <pre><span class="comment"># Initialised by init_state() in exasim_core.py</span>
+<span class="comment"># ── Config ──────────────────────────────────</span>
+openai_key        <span class="comment"># OpenAI API key (from UI or st.secrets)</span>
+openai_model      <span class="comment"># Selected model (gpt-4o, gpt-4-turbo, etc.)</span>
+rack              <span class="comment"># Rack size (Eighth/Quarter/Half/Full)</span>
+dg                <span class="comment"># ASM disk groups selection</span>
+role              <span class="comment"># DBA / DMA / Both</span>
+level             <span class="comment"># Basic / Intermediate / Advanced</span>
+
+<span class="comment"># ── Lesson state ────────────────────────────</span>
+active_lesson_id  <span class="comment"># Currently open lesson (e.g. "M1L2")</span>
+chat              <span class="comment"># {lesson_id: [messages]}</span>
+quiz_state        <span class="comment"># {lesson_id: {score, answered}}</span>
+
+<span class="comment"># ── Playground state ────────────────────────</span>
+pg_ex_id          <span class="comment"># Selected exercise id (e.g. "PG015")</span>
+pg_result         <span class="comment"># {ex_id: {verdict, pts, correct_cmd, feedback}}</span>
+pg_scores         <span class="comment"># {category: {correct, partial, wrong, pts}}</span>
+pg_total_pts      <span class="comment"># Running total score</span>
+pg_history        <span class="comment"># [{id, cmd, verdict, pts, ts}, ...]</span>
+pg_hints_shown    <span class="comment"># {ex_id: 0|1|2} — hints revealed per exercise</span></pre>
+  </div>
+
+  <!-- ═══════════════════════════════════ 04 CURRICULUM ════════════════════════ -->
+  <h2 id="curriculum">04 — Curriculum Structure</h2>
+
+  <table>
+    <thead><tr><th>Module</th><th>Title</th><th>Lessons</th><th>Topics</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pill pill-purple">M0</span></td><td>Architecture Foundations</td><td>4</td><td>What is Exadata, Compute Node, Storage Cell, InfiniBand HDR/RDMA</td></tr>
+      <tr><td><span class="pill pill-blue">M1</span></td><td>CellCLI</td><td>4</td><td>Basics/Login/List, Disk Hierarchy, Flash Cache & Flash Log, Metrics & Alerts</td></tr>
+      <tr><td><span class="pill pill-blue">M2</span></td><td>DCLI</td><td>2</td><td>Fundamentals & Cell Groups, Passwordless SSH Setup</td></tr>
+      <tr><td><span class="pill pill-green">M3</span></td><td>ASM on Exadata</td><td>2</td><td>Disk Groups (DATAC1/RECOC1), Adding Grid Disks & Rebalance</td></tr>
+      <tr><td><span class="pill pill-gold">M4</span></td><td>RMAN</td><td>1</td><td>Incremental Strategy, Block Change Tracking, Smart Incremental</td></tr>
+      <tr><td><span class="pill pill-red">M5</span></td><td>SRVCTL & CRSCTL</td><td>2</td><td>RAC instance management, Cluster stack control, Voting disks</td></tr>
+      <tr><td><span class="pill pill-blue">M6</span></td><td>Data Guard (DGMGRL)</td><td>2</td><td>Show configuration, Graceful Switchover</td></tr>
+      <tr><td><span class="pill pill-purple">M7</span></td><td>Smart Scan & Tuning</td><td>1</td><td>Verifying offload, V$SQL stats, Storage Index savings</td></tr>
+      <tr><td><span class="pill pill-red">M8</span></td><td>Incident Response</td><td>1</td><td>Cell failure with HIGH redundancy, DISK_REPAIR_TIME, rebuild</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info-box">
+    <strong>Each lesson has 8 sections:</strong>
+    🎯 Why &nbsp;•&nbsp; 🏗 How &nbsp;•&nbsp; 📜 Syntax &nbsp;•&nbsp;
+    ▶ Demo (AI) &nbsp;•&nbsp; ⌨ Practice Terminal &nbsp;•&nbsp;
+    🚨 Real-World Scenario &nbsp;•&nbsp; ❓ Quiz &nbsp;•&nbsp; 💬 Free Chat
+  </div>
+
+  <!-- ═══════════════════════════════════ 05 PLAYGROUND ════════════════════════ -->
+  <h2 id="playground">05 — DBA Playground</h2>
+
+  <div class="grid2">
+    <div class="card card-green">
+      <div class="card-title">EXERCISE BREAKDOWN</div>
+      <table>
+        <thead><tr><th>Category</th><th>Count</th></tr></thead>
+        <tbody>
+          <tr><td>🖥 CellCLI</td><td>14 exercises</td></tr>
+          <tr><td>⚡ DCLI</td><td>5 exercises</td></tr>
+          <tr><td>💾 ASM</td><td>6 exercises</td></tr>
+          <tr><td>🛡 RMAN</td><td>5 exercises</td></tr>
+          <tr><td>🔗 SRVCTL / CRSCTL</td><td>6 exercises</td></tr>
+          <tr><td>🔄 DGMGRL</td><td>5 exercises</td></tr>
+          <tr><td>🚀 Smart Scan</td><td>4 exercises</td></tr>
+          <tr><td>🚨 Incident Response</td><td>5 exercises</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card card-gold">
+      <div class="card-title">SCORING SYSTEM</div>
+      <p style="color:#8ab4d8;font-size:14px;margin-bottom:10px;">Each exercise is AI-evaluated by ExaSimBot:</p>
+      <table>
+        <thead><tr><th>Verdict</th><th>Base Points</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td><span style="color:#00ff88;font-weight:700">CORRECT ✓</span></td><td>10 pts</td><td>−2 pts per hint used (min 2)</td></tr>
+          <tr><td><span style="color:#f39c12;font-weight:700">PARTIAL ~</span></td><td>5 pts</td><td>−1 pt per hint used (min 1)</td></tr>
+          <tr><td><span style="color:#e74c3c;font-weight:700">WRONG ✗</span></td><td>0 pts</td><td>Reference command shown</td></tr>
+        </tbody>
+      </table>
+      <p style="color:#8ab4d8;font-size:13px;margin-top:10px;">Hint 1 = −2 pts &nbsp;•&nbsp; Hint 2 = additional −2 pts &nbsp;•&nbsp; Best score kept on retry</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ 06 GIT PULL ═══════════════════════════ -->
+  <h2 id="git-pull">06 — Git Pull (Get Latest Code)</h2>
+
+  <div class="card card-blue">
+    <div class="card-title">BEFORE YOU START WORKING — ALWAYS PULL FIRST</div>
+    <pre><span class="comment"># 1. Navigate to the project directory</span>
+<span class="cmd">cd</span> <span class="arg">/home/cmidbmod/exa/exadatasimulator</span>
+
+<span class="comment"># 2. Check current status</span>
+<span class="cmd">git</span> <span class="arg">status</span>
+
+<span class="comment"># 3. Pull latest changes from GitHub</span>
+<span class="cmd">git</span> <span class="arg">pull origin main</span>
+
+<span class="comment"># 4. Confirm you are up to date</span>
+<span class="cmd">git</span> <span class="arg">log --oneline -5</span></pre>
+  </div>
+
+  <div class="warn-box">
+    <strong>⚠ Never skip the pull step.</strong> If someone else (or Streamlit AI) edited the repo on GitHub and you edit locally without pulling first, you will get a merge conflict when you try to push.
+  </div>
+
+  <h3>What to do if pull says "merge conflict"</h3>
+  <pre><span class="comment"># See which files conflict</span>
+<span class="cmd">git</span> <span class="arg">status</span>
+
+<span class="comment"># Option A — Keep your local version (discard GitHub changes)</span>
+<span class="cmd">git</span> <span class="arg">checkout --ours &lt;filename&gt;</span>
+<span class="cmd">git</span> <span class="arg">add &lt;filename&gt;</span>
+<span class="cmd">git</span> <span class="arg">commit -m <span class="str">"resolve conflict — kept local version"</span></span>
+
+<span class="comment"># Option B — Take GitHub version (discard your local changes)</span>
+<span class="cmd">git</span> <span class="arg">checkout --theirs &lt;filename&gt;</span>
+<span class="cmd">git</span> <span class="arg">add &lt;filename&gt;</span>
+<span class="cmd">git</span> <span class="arg">commit -m <span class="str">"resolve conflict — took remote version"</span></span>
+
+<span class="comment"># Option C — Nuclear: throw away ALL local changes, match GitHub exactly</span>
+<span class="cmd">git</span> <span class="arg">fetch origin</span>
+<span class="cmd">git</span> <span class="arg">reset --hard origin/main</span></pre>
+
+  <!-- ═══════════════════════════════════ 07 GIT PUSH ═══════════════════════════ -->
+  <h2 id="git-push">07 — Git Commit &amp; Push (Save Changes)</h2>
+
+  <div class="card card-red">
+    <div class="card-title">STANDARD PUSH WORKFLOW — DO THIS EVERY TIME YOU MAKE CHANGES</div>
+    <pre><span class="comment"># 1. Go to project directory</span>
+<span class="cmd">cd</span> <span class="arg">/home/cmidbmod/exa/exadatasimulator</span>
+
+<span class="comment"># 2. See what changed</span>
+<span class="cmd">git</span> <span class="arg">status</span>
+<span class="cmd">git</span> <span class="arg">diff</span>                      <span class="comment"># show line-by-line changes</span>
+
+<span class="comment"># 3. Stage the files you changed</span>
+<span class="cmd">git</span> <span class="arg">add app.py</span>                 <span class="comment"># specific file</span>
+<span class="cmd">git</span> <span class="arg">add pages/2_Playground.py</span>  <span class="comment"># another file</span>
+<span class="cmd">git</span> <span class="arg">add .</span>                      <span class="comment"># OR: stage everything (use carefully)</span>
+
+<span class="comment"># 4. Commit with a clear message</span>
+<span class="cmd">git</span> <span class="arg">commit -m <span class="str">"Add feature: describe what you changed"</span></span>
+
+<span class="comment"># 5. Push to GitHub</span>
+<span class="cmd">git</span> <span class="arg">push https://khadayatepa:YOUR_TOKEN@github.com/khadayatepa/exadatasimulator.git main</span></pre>
+  </div>
+
+  <div class="info-box">
+    <strong>Tip — store your token in the remote URL once</strong> so you never need to type it again:
+    <pre style="margin-top:8px;"><span class="cmd">git</span> <span class="arg">remote set-url origin https://khadayatepa:YOUR_TOKEN@github.com/khadayatepa/exadatasimulator.git</span>
+<span class="comment"># Now you can just run:</span>
+<span class="cmd">git</span> <span class="arg">push origin main</span></pre>
+  </div>
+
+  <h3>GitHub Personal Access Token (PAT)</h3>
+  <ol class="steps">
+    <li>
+      <div class="step-text">
+        <div class="step-title">Go to GitHub Settings</div>
+        <div class="step-desc">github.com → top-right avatar → Settings</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-text">
+        <div class="step-title">Developer Settings → Personal Access Tokens</div>
+        <div class="step-desc">Left sidebar → Developer Settings → Personal Access Tokens → Tokens (classic)</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-text">
+        <div class="step-title">Generate new token</div>
+        <div class="step-desc">Click "Generate new token (classic)" → tick the <strong>repo</strong> checkbox → set expiry → Generate</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-text">
+        <div class="step-title">Copy the token immediately</div>
+        <div class="step-desc">Starts with <code>ghp_...</code> — you only see it once. Store it safely (password manager).</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-text">
+        <div class="step-title">Revoke old tokens</div>
+        <div class="step-desc">Any token shared in chat / email / Slack must be revoked immediately from the same Tokens page.</div>
+      </div>
+    </li>
+  </ol>
+
+  <!-- ═══════════════════════════════════ 08 GIT REFERENCE ══════════════════════ -->
+  <h2 id="git-reference">08 — Git Quick Reference Card</h2>
+
+  <div class="grid2">
+    <div class="card card-purple">
+      <div class="card-title">INSPECTION COMMANDS</div>
+      <pre><span class="cmd">git status</span>              <span class="comment"># what changed?</span>
+<span class="cmd">git diff</span>                <span class="comment"># line-by-line changes</span>
+<span class="cmd">git diff --staged</span>       <span class="comment"># staged changes</span>
+<span class="cmd">git log --oneline -10</span>   <span class="comment"># recent commits</span>
+<span class="cmd">git log --oneline --graph</span> <span class="comment"># branch diagram</span>
+<span class="cmd">git show c9f3ad5</span>        <span class="comment"># show a specific commit</span>
+<span class="cmd">git remote -v</span>           <span class="comment"># show remotes</span></pre>
+    </div>
+    <div class="card card-green">
+      <div class="card-title">UNDO COMMANDS</div>
+      <pre><span class="comment"># Discard unstaged changes in one file</span>
+<span class="cmd">git checkout -- app.py</span>
+
+<span class="comment"># Unstage a file (keep changes)</span>
+<span class="cmd">git reset HEAD app.py</span>
+
+<span class="comment"># Undo last commit (keep changes)</span>
+<span class="cmd">git reset --soft HEAD~1</span>
+
+<span class="comment"># ⚠ NUCLEAR: discard all local changes</span>
+<span class="cmd">git reset --hard origin/main</span></pre>
+    </div>
+    <div class="card card-gold">
+      <div class="card-title">BRANCH COMMANDS</div>
+      <pre><span class="comment"># See all branches</span>
+<span class="cmd">git branch -a</span>
+
+<span class="comment"># Create and switch to new branch</span>
+<span class="cmd">git checkout -b feature/my-feature</span>
+
+<span class="comment"># Switch back to main</span>
+<span class="cmd">git checkout main</span>
+
+<span class="comment"># Merge feature branch into main</span>
+<span class="cmd">git merge feature/my-feature</span></pre>
+    </div>
+    <div class="card card-teal">
+      <div class="card-title">THIS REPO'S COMMIT HISTORY</div>
+      <pre><span class="ok">c9f3ad5</span> Add DBA Playground: 50 exercises
+<span class="ok">025c6c0</span> Refactor app.py home view
+<span class="ok">1721264</span> Fix return statement formatting
+<span class="ok">34e4efb</span> Fix return statement formatting
+<span class="ok">33278e1</span> Update app.py
+<span class="ok">06bd70a</span> Create lesson workspace
+<span class="comment">
+Remote: github.com/khadayatepa/exadatasimulator
+Branch: main</span></pre>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ 09 DEPLOY ════════════════════════════ -->
+  <h2 id="deploy">09 — Streamlit Cloud Deployment</h2>
+
+  <div class="flow" style="margin-bottom:20px;">
+    <div class="flow-box">
+      <span class="fb-icon">✏️</span>
+      <span class="fb-label">EDIT CODE</span>
+      <span class="fb-sub">locally</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <span class="fb-icon">💾</span>
+      <span class="fb-label">GIT COMMIT</span>
+      <span class="fb-sub">git commit -m</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <span class="fb-icon">📤</span>
+      <span class="fb-label">GIT PUSH</span>
+      <span class="fb-sub">→ GitHub</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <span class="fb-icon">⚡</span>
+      <span class="fb-label">AUTO DEPLOY</span>
+      <span class="fb-sub">~30 seconds</span>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">
+      <span class="fb-icon">🌐</span>
+      <span class="fb-label">LIVE APP</span>
+      <span class="fb-sub">streamlit.app</span>
+    </div>
+  </div>
+
+  <div class="card card-blue">
+    <div class="card-title">DEPLOYMENT DETAILS</div>
+    <table>
+      <tbody>
+        <tr><td style="white-space:nowrap;color:#f39c12;">Live URL</td><td>https://exadatasimulator-4gdkklcd7q9gekkkvhs9y3.streamlit.app/</td></tr>
+        <tr><td style="color:#f39c12;">Repository</td><td>github.com/khadayatepa/exadatasimulator</td></tr>
+        <tr><td style="color:#f39c12;">Branch</td><td>main</td></tr>
+        <tr><td style="color:#f39c12;">Entry file</td><td>app.py</td></tr>
+        <tr><td style="color:#f39c12;">Auto-redeploy</td><td>Yes — triggered on every push to main</td></tr>
+        <tr><td style="color:#f39c12;">Python version</td><td>3.11 (Streamlit Cloud default)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Streamlit Cloud Secrets (Optional)</h3>
+  <p style="color:#8ab4d8;margin-bottom:10px;">If you want the OpenAI key pre-filled without typing it in the UI every time:</p>
+  <pre><span class="comment"># In Streamlit Cloud: App → Settings → Secrets → paste this:</span>
+openai_key = <span class="str">"sk-..."</span>
+
+<span class="comment"># The code in exasim_core.py reads it automatically:</span>
+<span class="comment"># st.session_state.openai_key = st.secrets.get("openai_key", "")</span></pre>
+
+  <!-- ═══════════════════════════════════ 10 LOCAL RUN ══════════════════════════ -->
+  <h2 id="run-local">10 — Running Locally</h2>
+
+  <ol class="steps">
+    <li>
+      <div class="step-text">
+        <div class="step-title">Clone the repository</div>
+        <pre><span class="cmd">git clone</span> <span class="arg">https://github.com/khadayatepa/exadatasimulator.git</span>
+<span class="cmd">cd</span> <span class="arg">exadatasimulator</span></pre>
+      </div>
+    </li>
+    <li>
+      <div class="step-text">
+        <div class="step-title">Install dependencies</div>
+        <pre><span class="cmd">pip install</span> <span class="arg">-r requirements.txt</span></pre>
+      </div>
+    </li>
+    <li>
+      <div class="step-text">
+        <div class="step-title">Run the app</div>
+        <pre><span class="cmd">streamlit run</span> <span class="arg">app.py</span>
+<span class="comment"># Opens at http://localhost:8501</span></pre>
+      </div>
+    </li>
+    <li>
+      <div class="step-text">
+        <div class="step-title">Enter your OpenAI API key</div>
+        <div class="step-desc">Type your <code>sk-...</code> key in the API Key field on the Home page config bar.</div>
+      </div>
+    </li>
+    <li>
+      <div class="step-text">
+        <div class="step-title">Optional — use a secrets file</div>
+        <pre><span class="comment"># Create .streamlit/secrets.toml</span>
+<span class="cmd">mkdir</span> <span class="arg">.streamlit</span>
+<span class="comment"># Add: openai_key = "sk-..."</span></pre>
+      </div>
+    </li>
+  </ol>
+
+  <!-- ═══════════════════════════════════ 11 ENV ════════════════════════════════ -->
+  <h2 id="env">11 — Environment &amp; Secrets</h2>
+
+  <div class="warn-box">
+    <strong>⚠ Never commit API keys or tokens to git.</strong>
+    The <code>.gitignore</code> should include <code>.streamlit/secrets.toml</code> and any <code>.env</code> files.
+  </div>
+
+  <div class="grid2">
+    <div class="card card-gold">
+      <div class="card-title">OPENAI API KEY</div>
+      <p style="font-size:14px;color:#8ab4d8;margin-bottom:10px;">3 ways to provide it (in priority order):</p>
+      <pre><span class="comment"># 1. Via Streamlit secrets (recommended for cloud)</span>
+<span class="comment"># .streamlit/secrets.toml:</span>
+openai_key = <span class="str">"sk-..."</span>
+
+<span class="comment"># 2. UI input on the Home page</span>
+<span class="comment"># (works anywhere, stored in session state only)</span>
+
+<span class="comment"># 3. Environment variable (local dev)</span>
+<span class="cmd">export</span> <span class="arg">OPENAI_API_KEY=sk-...</span></pre>
+    </div>
+    <div class="card card-red">
+      <div class="card-title">GITHUB PAT TOKEN</div>
+      <p style="font-size:14px;color:#8ab4d8;margin-bottom:10px;">Used only for git push — never stored in the app:</p>
+      <pre><span class="comment"># Store in remote URL (one-time setup)</span>
+<span class="cmd">git remote set-url origin</span> \
+  <span class="arg">https://khadayatepa:ghp_TOKEN@github.com/khadayatepa/exadatasimulator.git</span>
+
+<span class="comment"># Then push is simply:</span>
+<span class="cmd">git push origin main</span>
+
+<span class="comment"># ⚠ Revoke any token shared in chat/email!</span>
+<span class="comment"># github.com → Settings → Developer Settings → PAT</span></pre>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ 12 TROUBLESHOOT ══════════════════════ -->
+  <h2 id="troubleshoot">12 — Troubleshooting</h2>
+
+  <table>
+    <thead><tr><th>Problem</th><th>Cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Streamlit Cloud shows old code</td>
+        <td>Push didn't reach GitHub</td>
+        <td>Run <code>git log --oneline -3</code> — if local is ahead of origin, the push failed. Re-push with token.</td>
+      </tr>
+      <tr>
+        <td><code>git push</code> → 403 Forbidden</td>
+        <td>Token lacks <code>repo</code> write permission</td>
+        <td>Generate new classic PAT with <strong>repo</strong> scope checked.</td>
+      </tr>
+      <tr>
+        <td><code>git push</code> → "could not read Username"</td>
+        <td>No credentials configured</td>
+        <td>Use full URL with token: <code>git push https://user:token@github.com/...</code></td>
+      </tr>
+      <tr>
+        <td>App shows blank/white page</td>
+        <td>Python import error</td>
+        <td>Streamlit Cloud → Logs tab. Usually a missing import or syntax error.</td>
+      </tr>
+      <tr>
+        <td>Playground page 404</td>
+        <td><code>pages/2_Playground.py</code> not in repo</td>
+        <td>Confirm file was committed: <code>git show HEAD --stat</code></td>
+      </tr>
+      <tr>
+        <td>OpenAI error in Demo/Practice</td>
+        <td>Invalid or missing API key</td>
+        <td>Check key in Home config bar. Verify key at platform.openai.com → API Keys.</td>
+      </tr>
+      <tr>
+        <td>ModuleNotFoundError: openai</td>
+        <td>Dependency not installed</td>
+        <td>Check <code>requirements.txt</code> has <code>openai&gt;=1.30.0</code>. Run <code>pip install -r requirements.txt</code>.</td>
+      </tr>
+      <tr>
+        <td>Merge conflict on pull</td>
+        <td>Local and remote both changed same file</td>
+        <td>See Section 06 for resolution steps.</td>
+      </tr>
+      <tr>
+        <td>Session state resets on every page switch</td>
+        <td>Normal Streamlit behaviour — expected</td>
+        <td><code>init_state()</code> uses <code>if k not in st.session_state</code> to preserve values across reruns.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ═══════════════════════════════════ FOOTER ════════════════════════════════ -->
+  <footer>
+    ORACLE EXADATA X8M SIMULATOR — PROJECT GUIDE<br>
+    PRASHANT | ORACLE ACE (APPRENTICE) | PRASHANTORACLEDBA.WORDPRESS.COM<br>
+    <span style="color:#1a2c47;">────────────────────────────────────────</span><br>
+    STREAMLIT + OPENAI GPT-4o • GITHUB: KHADAYATEPA/EXADATASIMULATOR
+  </footer>
+
+</div>
+</body>
+</html>
